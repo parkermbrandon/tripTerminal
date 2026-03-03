@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Trip Terminal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Map -->
+    <div id="map-container">
+      <div id="map"></div>
+      <div id="map-controls">
+        <button id="satellite-toggle" title="Toggle satellite view">&#127760;</button>
+      </div>
+    </div>
+
+    <!-- Side Panel -->
+    <div id="side-panel">
+      <div id="panel-header">
+        <span class="header-icon">&#9992;</span>
+        <button id="trip-name" class="trip-name-btn">NO TRIP LOADED <span class="dropdown-arrow">&#9662;</span></button>
+        <button id="share-btn" class="share-btn hidden" title="Copy share link">&#128279;</button>
+      </div>
+      <div id="panel-tabs">
+        <button class="tab active" data-cat="all">All</button>
+        <button class="tab" data-cat="eats">Eats</button>
+        <button class="tab" data-cat="sleeps">Sleeps</button>
+        <button class="tab" data-cat="spots">Spots</button>
+        <button class="tab" data-cat="events">Events</button>
+      </div>
+      <div id="panel-actions">
+        <button id="add-item-btn">+ Add Place</button>
+      </div>
+      <div id="panel-list"></div>
+    </div>
+
+    <!-- Terminal toggle bar -->
+    <div id="terminal-toggle">
+      <span class="toggle-label">Terminal</span>
+      <span class="toggle-arrow">&#9650;</span>
+    </div>
+
+    <!-- Terminal (collapsed by default) -->
+    <div id="terminal" class="collapsed">
+      <div id="terminal-output"></div>
+      <div id="terminal-input-line">
+        <span class="prompt-char">&#10148;&nbsp;</span>
+        <span id="input-mirror"></span><span id="cursor">&#x2588;</span>
+        <input type="text" id="terminal-input" autocomplete="off" spellcheck="false">
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal overlay -->
+  <div id="modal-overlay" class="hidden">
+    <div id="modal-content"></div>
+  </div>
+
+  <!-- File input for import (hidden) -->
+  <input type="file" id="file-import" accept=".json" style="display:none">
+
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBT2CURjhz1xdEsOTnYBrfPHoNMHOjG6og&libraries=places"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="data.js"></script>
+  <script src="map.js"></script>
+  <script src="commands.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
