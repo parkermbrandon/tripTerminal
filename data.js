@@ -62,6 +62,7 @@ const DB = (() => {
     _db.collection('trips').doc(id).set({
       name: tripData.name,
       items: tripData.items,
+      itinerary: tripData.itinerary || [],
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
     }).catch(err => console.warn('Firestore push failed:', err));
   }
@@ -88,12 +89,12 @@ const DB = (() => {
       const local = state.trips[id];
 
       // Deep compare to avoid echo loops
-      if (local && JSON.stringify({ name: local.name, items: local.items }) ===
-          JSON.stringify({ name: remote.name, items: remote.items })) {
+      if (local && JSON.stringify({ name: local.name, items: local.items, itinerary: local.itinerary }) ===
+          JSON.stringify({ name: remote.name, items: remote.items, itinerary: remote.itinerary })) {
         return;
       }
 
-      state.trips[id] = { name: remote.name, items: remote.items || [] };
+      state.trips[id] = { name: remote.name, items: remote.items || [], itinerary: remote.itinerary || [] };
       saveLocal(state);
       if (_refreshCb) _refreshCb();
     }, err => console.warn('onSnapshot error:', err));
@@ -125,7 +126,7 @@ const DB = (() => {
         const snap = await _db.collection('trips').doc(id).get();
         if (snap.exists) {
           const remote = snap.data();
-          state.trips[id] = { name: remote.name, items: remote.items || [] };
+          state.trips[id] = { name: remote.name, items: remote.items || [], itinerary: remote.itinerary || [] };
         } else {
           _pushTrip(id, state.trips[id]);
         }
@@ -148,7 +149,7 @@ const DB = (() => {
       if (!snap.exists) return null;
       const remote = snap.data();
       const state = load();
-      state.trips[id] = { name: remote.name, items: remote.items || [] };
+      state.trips[id] = { name: remote.name, items: remote.items || [], itinerary: remote.itinerary || [] };
       state.activeTrip = id;
       saveLocal(state);
       _listenToTrip(id);
@@ -174,7 +175,7 @@ const DB = (() => {
   function createTrip(name) {
     const state = load();
     const id = uuid();
-    state.trips[id] = { name, items: [] };
+    state.trips[id] = { name, items: [], itinerary: [] };
     state.activeTrip = id;
     save(state);
     _listenToTrip(id);
@@ -292,7 +293,7 @@ const DB = (() => {
   function exportData() {
     const trip = getActiveTrip();
     if (!trip) return null;
-    return JSON.stringify({ name: trip.name, items: trip.items }, null, 2);
+    return JSON.stringify({ name: trip.name, items: trip.items, itinerary: trip.itinerary || [] }, null, 2);
   }
 
   function importData(json) {
@@ -301,7 +302,7 @@ const DB = (() => {
       if (!data.name || !Array.isArray(data.items)) throw new Error('Invalid format');
       const state = load();
       const id = uuid();
-      state.trips[id] = { name: data.name, items: data.items };
+      state.trips[id] = { name: data.name, items: data.items, itinerary: data.itinerary || [] };
       state.activeTrip = id;
       save(state);
       _listenToTrip(id);
@@ -342,10 +343,53 @@ const DB = (() => {
     return item;
   }
 
+  // --- Itinerary (flights/hotels) ---
+  function addItineraryItem(entry) {
+    const state = load();
+    if (!state.activeTrip) return null;
+    const item = { id: uuid(), ...entry };
+    const trip = state.trips[state.activeTrip];
+    if (!trip.itinerary) trip.itinerary = [];
+    trip.itinerary.push(item);
+    save(state);
+    return item;
+  }
+
+  function getItinerary() {
+    const trip = getActiveTrip();
+    if (!trip) return [];
+    return trip.itinerary || [];
+  }
+
+  function removeItineraryItemById(id) {
+    const state = load();
+    if (!state.activeTrip) return false;
+    const trip = state.trips[state.activeTrip];
+    if (!trip.itinerary) return false;
+    const idx = trip.itinerary.findIndex(i => i.id === id);
+    if (idx === -1) return false;
+    const removed = trip.itinerary.splice(idx, 1)[0];
+    save(state);
+    return removed;
+  }
+
+  function editItineraryItemById(id, updates) {
+    const state = load();
+    if (!state.activeTrip) return null;
+    const trip = state.trips[state.activeTrip];
+    if (!trip.itinerary) return null;
+    const item = trip.itinerary.find(i => i.id === id);
+    if (!item) return null;
+    Object.assign(item, updates);
+    save(state);
+    return item;
+  }
+
   return {
     CATEGORIES, uuid,
     createTrip, listTrips, loadTrip, loadTripById, deleteTrip, getActiveTrip,
     addItem, getItems, findItem, removeItem, removeItemById, editItem, editItemById,
+    addItineraryItem, getItinerary, removeItineraryItemById, editItineraryItemById,
     getSettings, setSetting,
     exportData, importData,
     initSync, joinTrip, getShareUrl, isCloudEnabled,

@@ -62,7 +62,7 @@ html, body {
 /* === GRID LAYOUT === */
 #app {
   display: grid;
-  grid-template-columns: 1fr 320px;
+  grid-template-columns: 280px 1fr 320px;
   grid-template-rows: 1fr auto auto;
   height: 100vh;
   height: 100dvh;
@@ -71,7 +71,7 @@ html, body {
 
 #map-container {
   position: relative;
-  grid-column: 1;
+  grid-column: 2;
   grid-row: 1;
   border-right: 1px solid var(--border);
   overflow: hidden;
@@ -119,9 +119,212 @@ html, body {
   transform: scale(0.95);
 }
 
+/* === ITINERARY PANEL (left) === */
+#itin-panel {
+  grid-column: 1;
+  grid-row: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--panel-bg);
+  border-right: 1px solid var(--border);
+}
+
+#itin-header {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.itin-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+}
+
+.itin-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.itin-actions button {
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--terminal-bg);
+  color: var(--text);
+  font-family: 'Nunito', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.itin-actions button:hover {
+  background: var(--accent-light);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+#itin-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+#itin-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+#itin-list::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+/* Date group headers */
+.itin-date-group {
+  padding: 10px 14px 4px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+/* Timeline items */
+.itin-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  border-left: 3px solid transparent;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-bottom: 1px solid rgba(0,0,0,0.03);
+  position: relative;
+}
+
+.itin-item:hover {
+  background: var(--accent-light);
+}
+
+.itin-item.type-flight { border-left-color: var(--cat-transport); }
+.itin-item.type-hotel { border-left-color: var(--cat-sleeps); }
+.itin-item.type-eats { border-left-color: var(--cat-eats); }
+.itin-item.type-spots { border-left-color: var(--cat-spots); }
+.itin-item.type-events { border-left-color: var(--cat-events); }
+.itin-item.type-transport { border-left-color: var(--cat-transport); }
+.itin-item.type-sleeps { border-left-color: var(--cat-sleeps); }
+
+.itin-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+  width: 22px;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.itin-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.itin-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.itin-sub {
+  font-size: 10px;
+  color: var(--text-dim);
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.itin-cost {
+  font-size: 11px;
+  color: #2a9d5c;
+  font-weight: 700;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.itin-item-delete {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+  align-self: center;
+}
+
+.itin-item:hover .itin-item-delete {
+  opacity: 1;
+}
+
+.itin-item-delete:hover {
+  background: #fee;
+  color: #d44;
+}
+
+/* Cost summary footer */
+#itin-cost-summary {
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  background: var(--bg);
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#itin-cost-summary:empty {
+  display: none;
+}
+
+.itin-empty {
+  padding: 30px 14px;
+  color: var(--text-dim);
+  font-size: 11px;
+  text-align: center;
+  line-height: 1.8;
+}
+
 /* === SIDE PANEL === */
 #side-panel {
-  grid-column: 2;
+  grid-column: 3;
   grid-row: 1 / -1;
   display: flex;
   flex-direction: column;
@@ -368,7 +571,8 @@ html, body {
 
 /* Touch devices: always show delete */
 @media (hover: none) {
-  .panel-item-delete {
+  .panel-item-delete,
+  .itin-item-delete {
     opacity: 1;
   }
 }
@@ -383,7 +587,7 @@ html, body {
 
 /* === TERMINAL TOGGLE BAR === */
 #terminal-toggle {
-  grid-column: 1;
+  grid-column: 2;
   grid-row: 2;
   display: flex;
   align-items: center;
@@ -422,7 +626,7 @@ html, body {
 
 /* === TERMINAL === */
 #terminal {
-  grid-column: 1;
+  grid-column: 2;
   grid-row: 3;
   background: var(--terminal-bg);
   display: flex;
@@ -908,31 +1112,39 @@ html, body {
 @media (max-width: 700px) {
   #app {
     grid-template-columns: 1fr;
-    grid-template-rows: 40vh 1fr auto auto;
+    grid-template-rows: auto 35vh 1fr auto auto;
+  }
+
+  #itin-panel {
+    grid-column: 1;
+    grid-row: 1;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    max-height: 35vh;
   }
 
   #map-container {
     grid-column: 1;
-    grid-row: 1;
+    grid-row: 2;
     border-right: none;
     border-bottom: 1px solid var(--border);
   }
 
   #side-panel {
     grid-column: 1;
-    grid-row: 2;
+    grid-row: 3;
     border-bottom: 1px solid var(--border);
   }
 
   #terminal-toggle {
     grid-column: 1;
-    grid-row: 3;
+    grid-row: 4;
     border-right: none;
   }
 
   #terminal {
     grid-column: 1;
-    grid-row: 4;
+    grid-row: 5;
     border-right: none;
   }
 

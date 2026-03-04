@@ -69,6 +69,7 @@ const Commands = (() => {
     ctx.print('  trip list                 List all trips');
     ctx.print('  trip load <name>          Switch to a trip');
     ctx.print('  trip delete <name>        Delete a trip');
+    ctx.print('  itinerary                 Show trip timeline');
     ctx.print('  export                    Download trip as JSON');
     ctx.print('  import                    Upload JSON file');
     ctx.print('  satellite                 Toggle satellite view');
@@ -454,6 +455,110 @@ const Commands = (() => {
     }
     ctx.print(`Theme set to ${theme}.`, 'success');
   }, 'Switch color theme');
+
+  register('itinerary', (args, ctx) => {
+    const trip = DB.getActiveTrip();
+    if (!trip) {
+      ctx.print('No active trip.', 'warning');
+      return;
+    }
+    const itinerary = DB.getItinerary();
+    const items = DB.getItems();
+
+    // Same parseItemDate logic as app.js
+    function parseDate(timeStr) {
+      if (!timeStr) return null;
+      const s = timeStr.trim();
+      const direct = new Date(s);
+      if (!isNaN(direct) && direct.getFullYear() > 2000) return direct.toISOString().slice(0, 10);
+      const m = s.match(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{1,2})/i);
+      if (m) {
+        const months = { jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11 };
+        const mon = months[m[1].toLowerCase().slice(0, 3)];
+        const day = parseInt(m[2]);
+        if (mon !== undefined && day >= 1 && day <= 31) {
+          const d = new Date(new Date().getFullYear(), mon, day);
+          return d.toISOString().slice(0, 10);
+        }
+      }
+      return null;
+    }
+
+    function fmtDate(ds) {
+      if (!ds) return 'No Date';
+      const d = new Date(ds + 'T12:00:00');
+      if (isNaN(d)) return ds;
+      return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    }
+
+    const entries = [];
+    itinerary.forEach(item => {
+      let dk = item.type === 'flight' ? (item.departureDate || null) : (item.checkIn || null);
+      entries.push({ item, dateKey: dk, source: 'itin' });
+    });
+    items.forEach(item => {
+      entries.push({ item, dateKey: parseDate(item.time), source: 'place' });
+    });
+
+    const groups = {};
+    entries.forEach(e => {
+      const k = e.dateKey || '__none__';
+      if (!groups[k]) groups[k] = [];
+      groups[k].push(e);
+    });
+
+    const keys = Object.keys(groups).sort((a, b) => {
+      if (a === '__none__') return 1;
+      if (b === '__none__') return -1;
+      return a.localeCompare(b);
+    });
+
+    if (!entries.length) {
+      ctx.print('Itinerary is empty.', 'dim');
+      return;
+    }
+
+    let totalCost = 0;
+    ctx.print('');
+    ctx.print('--- ITINERARY ---', 'info');
+    keys.forEach(key => {
+      ctx.print('');
+      ctx.print(`── ${key === '__none__' ? 'No Date' : fmtDate(key)} ──`, 'info');
+      groups[key].forEach(e => {
+        const item = e.item;
+        const cost = parseFloat(String(item.cost || '').replace(/[^0-9.\-]/g, '')) || 0;
+        totalCost += cost;
+        const costStr = cost > 0 ? `  $${cost}` : '';
+        if (e.source === 'itin' && item.type === 'flight') {
+          ctx.print(`  ✈  ${item.departureCity || '?'} → ${item.arrivalCity || '?'}${costStr}`, 'cat-transport');
+          const parts = [];
+          if (item.airline) parts.push(item.airline + (item.flightNumber ? ' ' + item.flightNumber : ''));
+          if (item.departureTime || item.arrivalTime) parts.push((item.departureTime || '') + ' - ' + (item.arrivalTime || ''));
+          if (parts.length) ctx.print(`     ${parts.join(' | ')}`, 'dim');
+        } else if (e.source === 'itin' && item.type === 'hotel') {
+          ctx.print(`  🏨 ${item.name || 'Hotel'}${costStr}`, 'cat-sleeps');
+          const parts = [];
+          if (item.checkIn && item.checkOut) {
+            const nights = Math.round((new Date(item.checkOut + 'T12:00:00') - new Date(item.checkIn + 'T12:00:00')) / 86400000);
+            if (nights > 0) parts.push(nights + ' night' + (nights !== 1 ? 's' : ''));
+          }
+          if (item.confirmationNumber) parts.push('Conf: ' + item.confirmationNumber);
+          if (parts.length) ctx.print(`     ${parts.join(' | ')}`, 'dim');
+        } else {
+          const icons = { eats: '🍴', sleeps: '🛏️', spots: '📍', events: '📅', transport: '🚗' };
+          const icon = icons[item.category] || '📌';
+          ctx.print(`  ${icon} ${item.name}${costStr}`, `cat-${item.category}`);
+          if (item.time) ctx.print(`     ${item.time}`, 'dim');
+        }
+      });
+    });
+
+    if (totalCost > 0) {
+      ctx.print('');
+      ctx.print(`  Total: $${totalCost.toLocaleString()}`, 'success');
+    }
+    ctx.print('');
+  }, 'Show trip itinerary timeline');
 
   register('share', async (args, ctx) => {
     if (!DB.isCloudEnabled()) {

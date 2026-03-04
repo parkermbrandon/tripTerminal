@@ -14,6 +14,10 @@ const App = (() => {
   const modalOverlay = document.getElementById('modal-overlay');
   const modalContent = document.getElementById('modal-content');
   const shareBtn = document.getElementById('share-btn');
+  const itinList = document.getElementById('itin-list');
+  const itinCostSummary = document.getElementById('itin-cost-summary');
+  const addFlightBtn = document.getElementById('add-flight-btn');
+  const addHotelBtn = document.getElementById('add-hotel-btn');
 
   let history = [];
   let historyIdx = -1;
@@ -116,6 +120,7 @@ const App = (() => {
   function refresh() {
     TripMap.syncMarkers();
     renderPanel();
+    renderItinerary();
   }
 
   const ctx = { print, printHtml, clear, prompt, refresh };
@@ -604,6 +609,591 @@ const App = (() => {
     });
   }
 
+  // === Itinerary: Date Parsing ===
+  function parseItemDate(timeStr) {
+    if (!timeStr) return null;
+    const s = timeStr.trim();
+    // Try direct Date parse first (handles ISO, "March 15, 2026", etc.)
+    const direct = new Date(s);
+    if (!isNaN(direct) && direct.getFullYear() > 2000) {
+      return direct.toISOString().slice(0, 10);
+    }
+    // Try "Mon DD" patterns like "Mar 15", "Mar 15 7pm", "March 15"
+    const monthMatch = s.match(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{1,2})/i);
+    if (monthMatch) {
+      const months = { jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11 };
+      const mon = months[monthMatch[1].toLowerCase().slice(0, 3)];
+      const day = parseInt(monthMatch[2]);
+      if (mon !== undefined && day >= 1 && day <= 31) {
+        const year = new Date().getFullYear();
+        const d = new Date(year, mon, day);
+        return d.toISOString().slice(0, 10);
+      }
+    }
+    return null;
+  }
+
+  // === Itinerary Icons ===
+  const ITIN_ICONS = {
+    flight: '\u2708\uFE0F',
+    hotel: '\uD83C\uDFE8',
+    eats: '\uD83C\uDF74',
+    sleeps: '\uD83D\uDECF\uFE0F',
+    spots: '\uD83D\uDCCD',
+    events: '\uD83D\uDCC5',
+    transport: '\uD83D\uDE97',
+  };
+
+  // === Parse cost string to number ===
+  function parseCost(costStr) {
+    if (!costStr) return 0;
+    const num = parseFloat(String(costStr).replace(/[^0-9.\-]/g, ''));
+    return isNaN(num) ? 0 : num;
+  }
+
+  // === Format date for display ===
+  function formatDateHeading(dateStr) {
+    if (!dateStr) return 'No Date';
+    const d = new Date(dateStr + 'T12:00:00');
+    if (isNaN(d)) return dateStr;
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+
+  // === Render Itinerary Timeline ===
+  function renderItinerary() {
+    const trip = DB.getActiveTrip();
+    if (!trip) {
+      itinList.innerHTML = '<div class="itin-empty">No trip loaded.</div>';
+      itinCostSummary.innerHTML = '';
+      return;
+    }
+
+    // Collect all timeline entries
+    const entries = [];
+
+    // 1) Itinerary items (flights/hotels)
+    const itinerary = DB.getItinerary();
+    itinerary.forEach(item => {
+      let dateKey = null;
+      let sortTime = '';
+      if (item.type === 'flight') {
+        dateKey = item.departureDate || null;
+        sortTime = item.departureTime || '';
+      } else if (item.type === 'hotel') {
+        dateKey = item.checkIn || null;
+        sortTime = '23:59'; // hotels sort last within a day
+      }
+      entries.push({ source: 'itinerary', item, dateKey, sortTime, type: item.type });
+    });
+
+    // 2) Existing place items with parseable dates
+    const items = DB.getItems();
+    items.forEach(item => {
+      const dateKey = parseItemDate(item.time);
+      // Extract time portion for sorting
+      let sortTime = '';
+      if (item.time) {
+        const tMatch = item.time.match(/(\d{1,2}):?(\d{2})?\s*(am|pm|a|p)?/i);
+        if (tMatch) {
+          let h = parseInt(tMatch[1]);
+          const m = tMatch[2] ? parseInt(tMatch[2]) : 0;
+          const ampm = (tMatch[3] || '').toLowerCase();
+          if (ampm.startsWith('p') && h < 12) h += 12;
+          if (ampm.startsWith('a') && h === 12) h = 0;
+          sortTime = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+        }
+      }
+      entries.push({ source: 'place', item, dateKey, sortTime, type: item.category });
+    });
+
+    // Group by dateKey
+    const groups = {};
+    entries.forEach(e => {
+      const key = e.dateKey || '__none__';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(e);
+    });
+
+    // Sort date keys
+    const sortedKeys = Object.keys(groups).sort((a, b) => {
+      if (a === '__none__') return 1;
+      if (b === '__none__') return -1;
+      return a.localeCompare(b);
+    });
+
+    // Sort entries within each group by time
+    sortedKeys.forEach(key => {
+      groups[key].sort((a, b) => (a.sortTime || '').localeCompare(b.sortTime || ''));
+    });
+
+    itinList.innerHTML = '';
+
+    if (!entries.length) {
+      itinList.innerHTML = '<div class="itin-empty">No items yet.<br>Add flights, hotels, or places with dates.</div>';
+      renderCostSummary(entries);
+      return;
+    }
+
+    sortedKeys.forEach(key => {
+      // Date header
+      const header = document.createElement('div');
+      header.className = 'itin-date-group';
+      header.textContent = key === '__none__' ? 'No Date' : formatDateHeading(key);
+      itinList.appendChild(header);
+
+      // Entries
+      groups[key].forEach(entry => {
+        const el = document.createElement('div');
+        el.className = `itin-item type-${entry.type}`;
+
+        const icon = document.createElement('span');
+        icon.className = 'itin-icon';
+        icon.textContent = ITIN_ICONS[entry.type] || '\uD83D\uDCCC';
+
+        const info = document.createElement('div');
+        info.className = 'itin-info';
+
+        const nameEl = document.createElement('div');
+        nameEl.className = 'itin-name';
+
+        const subEl = document.createElement('div');
+        subEl.className = 'itin-sub';
+
+        if (entry.source === 'itinerary' && entry.item.type === 'flight') {
+          const f = entry.item;
+          nameEl.textContent = `${f.departureCity || '?'} → ${f.arrivalCity || '?'}`;
+          const parts = [];
+          if (f.airline) parts.push(f.airline + (f.flightNumber ? ' ' + f.flightNumber : ''));
+          if (f.departureTime || f.arrivalTime) parts.push((f.departureTime || '') + ' - ' + (f.arrivalTime || ''));
+          if (f.confirmationNumber) parts.push('Conf: ' + f.confirmationNumber);
+          subEl.textContent = parts.join(' | ');
+        } else if (entry.source === 'itinerary' && entry.item.type === 'hotel') {
+          const h = entry.item;
+          nameEl.textContent = h.name || 'Hotel';
+          const parts = [];
+          if (h.checkIn && h.checkOut) {
+            const nights = Math.round((new Date(h.checkOut + 'T12:00:00') - new Date(h.checkIn + 'T12:00:00')) / 86400000);
+            if (nights > 0) parts.push(nights + ' night' + (nights !== 1 ? 's' : ''));
+          }
+          if (h.confirmationNumber) parts.push('Conf: ' + h.confirmationNumber);
+          subEl.textContent = parts.join(' | ');
+        } else {
+          // Place item
+          const p = entry.item;
+          nameEl.textContent = p.name;
+          const parts = [];
+          if (p.time) {
+            // Show just the time portion if there's a date
+            const timeOnly = p.time.replace(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2}\s*/i, '').trim();
+            if (timeOnly) parts.push(timeOnly);
+            else parts.push(p.time);
+          }
+          if (p.address) parts.push(p.address);
+          subEl.textContent = parts.join(' | ');
+        }
+
+        info.appendChild(nameEl);
+        if (subEl.textContent) info.appendChild(subEl);
+
+        el.appendChild(icon);
+        el.appendChild(info);
+
+        // Cost
+        const costVal = parseCost(entry.item.cost);
+        if (costVal > 0) {
+          const costEl = document.createElement('span');
+          costEl.className = 'itin-cost';
+          costEl.textContent = '$' + costVal.toLocaleString();
+          el.appendChild(costEl);
+        }
+
+        // Delete button
+        const delBtn = document.createElement('button');
+        delBtn.className = 'itin-item-delete';
+        delBtn.innerHTML = '&times;';
+        delBtn.title = 'Delete';
+        delBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (entry.source === 'itinerary') {
+            DB.removeItineraryItemById(entry.item.id);
+          } else {
+            DB.removeItemById(entry.item.id);
+          }
+          refresh();
+        });
+        el.appendChild(delBtn);
+
+        // Click to edit
+        el.addEventListener('click', (e) => {
+          if (e.target.closest('.itin-item-delete')) return;
+          if (entry.source === 'itinerary') {
+            if (entry.item.type === 'flight') openEditFlightModal(entry.item);
+            else if (entry.item.type === 'hotel') openEditHotelModal(entry.item);
+          } else {
+            openEditModal(entry.item);
+          }
+        });
+
+        itinList.appendChild(el);
+      });
+    });
+
+    renderCostSummary(entries);
+  }
+
+  // === Cost Summary ===
+  function renderCostSummary(entries) {
+    if (!entries || !entries.length) {
+      itinCostSummary.innerHTML = '';
+      return;
+    }
+    let total = 0;
+    entries.forEach(e => { total += parseCost(e.item.cost); });
+    if (total > 0) {
+      itinCostSummary.innerHTML = `<span>Total</span><span style="color:#2a9d5c">$${total.toLocaleString()}</span>`;
+    } else {
+      itinCostSummary.innerHTML = '';
+    }
+  }
+
+  // === Add Flight Modal ===
+  function openAddFlightModal() {
+    const trip = DB.getActiveTrip();
+    if (!trip) { openNewTripModal(); return; }
+
+    const html = `
+      <div class="modal-header">
+        <span class="modal-title">Add Flight</span>
+        <button class="modal-close" data-action="close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex;gap:10px">
+          <div class="modal-field" style="flex:1">
+            <label>Airline</label>
+            <input type="text" id="flight-airline" placeholder="e.g. Hawaiian Air">
+          </div>
+          <div class="modal-field" style="flex:1">
+            <label>Flight #</label>
+            <input type="text" id="flight-number" placeholder="e.g. HA 11">
+          </div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <div class="modal-field" style="flex:1">
+            <label>From</label>
+            <input type="text" id="flight-from" placeholder="e.g. LAX">
+          </div>
+          <div class="modal-field" style="flex:1">
+            <label>To</label>
+            <input type="text" id="flight-to" placeholder="e.g. HNL">
+          </div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <div class="modal-field" style="flex:1">
+            <label>Departure Date</label>
+            <input type="date" id="flight-dep-date">
+          </div>
+          <div class="modal-field" style="flex:1">
+            <label>Departure Time</label>
+            <input type="text" id="flight-dep-time" placeholder="e.g. 8:30 AM">
+          </div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <div class="modal-field" style="flex:1">
+            <label>Arrival Date</label>
+            <input type="date" id="flight-arr-date">
+          </div>
+          <div class="modal-field" style="flex:1">
+            <label>Arrival Time</label>
+            <input type="text" id="flight-arr-time" placeholder="e.g. 11:45 AM">
+          </div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <div class="modal-field" style="flex:1">
+            <label>Confirmation #</label>
+            <input type="text" id="flight-conf" placeholder="Optional">
+          </div>
+          <div class="modal-field" style="flex:1">
+            <label>Cost</label>
+            <input type="text" id="flight-cost" placeholder="e.g. $450">
+          </div>
+        </div>
+        <div class="modal-field">
+          <label>Notes</label>
+          <textarea id="flight-notes" placeholder="Optional notes..."></textarea>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" data-action="close">Cancel</button>
+          <button class="btn btn-primary" data-action="save">Add Flight</button>
+        </div>
+      </div>`;
+
+    modal.open(html, (action) => {
+      if (action === 'close') { modal.close(); return; }
+      if (action === 'save') {
+        const airline = document.getElementById('flight-airline').value.trim();
+        const flightNumber = document.getElementById('flight-number').value.trim();
+        const departureCity = document.getElementById('flight-from').value.trim();
+        const arrivalCity = document.getElementById('flight-to').value.trim();
+        const departureDate = document.getElementById('flight-dep-date').value;
+        const departureTime = document.getElementById('flight-dep-time').value.trim();
+        const arrivalDate = document.getElementById('flight-arr-date').value;
+        const arrivalTime = document.getElementById('flight-arr-time').value.trim();
+        const confirmationNumber = document.getElementById('flight-conf').value.trim();
+        const cost = document.getElementById('flight-cost').value.trim();
+        const notes = document.getElementById('flight-notes').value.trim();
+        if (!departureCity && !arrivalCity && !airline) return;
+        DB.addItineraryItem({ type: 'flight', airline, flightNumber, departureCity, arrivalCity, departureDate, departureTime, arrivalDate, arrivalTime, confirmationNumber, cost, notes });
+        refresh();
+        modal.close();
+      }
+    });
+
+    setTimeout(() => {
+      const el = document.getElementById('flight-airline');
+      if (el) el.focus();
+    }, 50);
+  }
+
+  // === Edit Flight Modal ===
+  function openEditFlightModal(item) {
+    const html = `
+      <div class="modal-header">
+        <span class="modal-title">Edit Flight</span>
+        <button class="modal-close" data-action="close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex;gap:10px">
+          <div class="modal-field" style="flex:1">
+            <label>Airline</label>
+            <input type="text" id="flight-airline" value="${escAttr(item.airline || '')}">
+          </div>
+          <div class="modal-field" style="flex:1">
+            <label>Flight #</label>
+            <input type="text" id="flight-number" value="${escAttr(item.flightNumber || '')}">
+          </div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <div class="modal-field" style="flex:1">
+            <label>From</label>
+            <input type="text" id="flight-from" value="${escAttr(item.departureCity || '')}">
+          </div>
+          <div class="modal-field" style="flex:1">
+            <label>To</label>
+            <input type="text" id="flight-to" value="${escAttr(item.arrivalCity || '')}">
+          </div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <div class="modal-field" style="flex:1">
+            <label>Departure Date</label>
+            <input type="date" id="flight-dep-date" value="${escAttr(item.departureDate || '')}">
+          </div>
+          <div class="modal-field" style="flex:1">
+            <label>Departure Time</label>
+            <input type="text" id="flight-dep-time" value="${escAttr(item.departureTime || '')}">
+          </div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <div class="modal-field" style="flex:1">
+            <label>Arrival Date</label>
+            <input type="date" id="flight-arr-date" value="${escAttr(item.arrivalDate || '')}">
+          </div>
+          <div class="modal-field" style="flex:1">
+            <label>Arrival Time</label>
+            <input type="text" id="flight-arr-time" value="${escAttr(item.arrivalTime || '')}">
+          </div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <div class="modal-field" style="flex:1">
+            <label>Confirmation #</label>
+            <input type="text" id="flight-conf" value="${escAttr(item.confirmationNumber || '')}">
+          </div>
+          <div class="modal-field" style="flex:1">
+            <label>Cost</label>
+            <input type="text" id="flight-cost" value="${escAttr(item.cost || '')}">
+          </div>
+        </div>
+        <div class="modal-field">
+          <label>Notes</label>
+          <textarea id="flight-notes">${escHtml(item.notes || '')}</textarea>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" data-action="close">Cancel</button>
+          <button class="btn btn-primary" data-action="save">Save Changes</button>
+        </div>
+      </div>`;
+
+    modal.open(html, (action) => {
+      if (action === 'close') { modal.close(); return; }
+      if (action === 'save') {
+        DB.editItineraryItemById(item.id, {
+          airline: document.getElementById('flight-airline').value.trim(),
+          flightNumber: document.getElementById('flight-number').value.trim(),
+          departureCity: document.getElementById('flight-from').value.trim(),
+          arrivalCity: document.getElementById('flight-to').value.trim(),
+          departureDate: document.getElementById('flight-dep-date').value,
+          departureTime: document.getElementById('flight-dep-time').value.trim(),
+          arrivalDate: document.getElementById('flight-arr-date').value,
+          arrivalTime: document.getElementById('flight-arr-time').value.trim(),
+          confirmationNumber: document.getElementById('flight-conf').value.trim(),
+          cost: document.getElementById('flight-cost').value.trim(),
+          notes: document.getElementById('flight-notes').value.trim(),
+        });
+        refresh();
+        modal.close();
+      }
+    });
+  }
+
+  // === Add Hotel Modal ===
+  function openAddHotelModal() {
+    const trip = DB.getActiveTrip();
+    if (!trip) { openNewTripModal(); return; }
+
+    const html = `
+      <div class="modal-header">
+        <span class="modal-title">Add Hotel</span>
+        <button class="modal-close" data-action="close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-field">
+          <label>Hotel Name</label>
+          <input type="text" id="hotel-name" placeholder="e.g. Hilton Waikiki" autofocus>
+        </div>
+        <div class="modal-field">
+          <label>Address</label>
+          <input type="text" id="hotel-address" placeholder="e.g. 2500 Kuhio Ave, Honolulu">
+        </div>
+        <div style="display:flex;gap:10px">
+          <div class="modal-field" style="flex:1">
+            <label>Check-in</label>
+            <input type="date" id="hotel-checkin">
+          </div>
+          <div class="modal-field" style="flex:1">
+            <label>Check-out</label>
+            <input type="date" id="hotel-checkout">
+          </div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <div class="modal-field" style="flex:1">
+            <label>Confirmation #</label>
+            <input type="text" id="hotel-conf" placeholder="Optional">
+          </div>
+          <div class="modal-field" style="flex:1">
+            <label>Cost</label>
+            <input type="text" id="hotel-cost" placeholder="e.g. $1200">
+          </div>
+        </div>
+        <div class="modal-field">
+          <label>Notes</label>
+          <textarea id="hotel-notes" placeholder="Optional notes..."></textarea>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" data-action="close">Cancel</button>
+          <button class="btn btn-primary" data-action="save">Add Hotel</button>
+        </div>
+      </div>`;
+
+    modal.open(html, async (action) => {
+      if (action === 'close') { modal.close(); return; }
+      if (action === 'save') {
+        const name = document.getElementById('hotel-name').value.trim();
+        if (!name) return;
+        const address = document.getElementById('hotel-address').value.trim();
+        const checkIn = document.getElementById('hotel-checkin').value;
+        const checkOut = document.getElementById('hotel-checkout').value;
+        const confirmationNumber = document.getElementById('hotel-conf').value.trim();
+        const cost = document.getElementById('hotel-cost').value.trim();
+        const notes = document.getElementById('hotel-notes').value.trim();
+        let lat = null, lng = null;
+        if (address) {
+          const geo = await TripMap.geocode(address);
+          if (geo) { lat = geo.lat; lng = geo.lng; }
+        }
+        DB.addItineraryItem({ type: 'hotel', name, address, lat, lng, checkIn, checkOut, confirmationNumber, cost, notes });
+        refresh();
+        modal.close();
+      }
+    });
+
+    setTimeout(() => {
+      const el = document.getElementById('hotel-name');
+      if (el) el.focus();
+    }, 50);
+  }
+
+  // === Edit Hotel Modal ===
+  function openEditHotelModal(item) {
+    const html = `
+      <div class="modal-header">
+        <span class="modal-title">Edit Hotel</span>
+        <button class="modal-close" data-action="close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-field">
+          <label>Hotel Name</label>
+          <input type="text" id="hotel-name" value="${escAttr(item.name || '')}">
+        </div>
+        <div class="modal-field">
+          <label>Address</label>
+          <input type="text" id="hotel-address" value="${escAttr(item.address || '')}">
+        </div>
+        <div style="display:flex;gap:10px">
+          <div class="modal-field" style="flex:1">
+            <label>Check-in</label>
+            <input type="date" id="hotel-checkin" value="${escAttr(item.checkIn || '')}">
+          </div>
+          <div class="modal-field" style="flex:1">
+            <label>Check-out</label>
+            <input type="date" id="hotel-checkout" value="${escAttr(item.checkOut || '')}">
+          </div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <div class="modal-field" style="flex:1">
+            <label>Confirmation #</label>
+            <input type="text" id="hotel-conf" value="${escAttr(item.confirmationNumber || '')}">
+          </div>
+          <div class="modal-field" style="flex:1">
+            <label>Cost</label>
+            <input type="text" id="hotel-cost" value="${escAttr(item.cost || '')}">
+          </div>
+        </div>
+        <div class="modal-field">
+          <label>Notes</label>
+          <textarea id="hotel-notes">${escHtml(item.notes || '')}</textarea>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" data-action="close">Cancel</button>
+          <button class="btn btn-primary" data-action="save">Save Changes</button>
+        </div>
+      </div>`;
+
+    modal.open(html, async (action) => {
+      if (action === 'close') { modal.close(); return; }
+      if (action === 'save') {
+        const name = document.getElementById('hotel-name').value.trim();
+        if (!name) return;
+        const address = document.getElementById('hotel-address').value.trim();
+        const checkIn = document.getElementById('hotel-checkin').value;
+        const checkOut = document.getElementById('hotel-checkout').value;
+        const confirmationNumber = document.getElementById('hotel-conf').value.trim();
+        const cost = document.getElementById('hotel-cost').value.trim();
+        const notes = document.getElementById('hotel-notes').value.trim();
+        const updates = { name, address, checkIn, checkOut, confirmationNumber, cost, notes };
+        if (address !== (item.address || '')) {
+          if (address) {
+            const geo = await TripMap.geocode(address);
+            if (geo) { updates.lat = geo.lat; updates.lng = geo.lng; }
+          } else {
+            updates.lat = null; updates.lng = null;
+          }
+        }
+        DB.editItineraryItemById(item.id, updates);
+        refresh();
+        modal.close();
+      }
+    });
+  }
+
   // === Side Panel ===
   function renderPanel() {
     const trip = DB.getActiveTrip();
@@ -710,6 +1300,10 @@ const App = (() => {
     openAddPlaceModal();
   });
 
+  // Flight/Hotel buttons
+  addFlightBtn.addEventListener('click', () => { openAddFlightModal(); });
+  addHotelBtn.addEventListener('click', () => { openAddHotelModal(); });
+
   // Share button
   shareBtn.addEventListener('click', async () => {
     const url = DB.getShareUrl();
@@ -777,6 +1371,7 @@ const App = (() => {
     print('');
 
     renderPanel();
+    renderItinerary();
   }
 
   document.addEventListener('DOMContentLoaded', boot);
