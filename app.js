@@ -16,6 +16,9 @@ const App = (() => {
   const shareBtn = document.getElementById('share-btn');
   const panelViewToggle = document.getElementById('panel-view-toggle');
   const itinCostSummary = document.getElementById('itin-cost-summary');
+  const panelCollapseBtn = document.getElementById('panel-collapse-btn');
+  const panelExpandBtn = document.getElementById('panel-expand-btn');
+  const appEl = document.getElementById('app');
 
   let history = [];
   let historyIdx = -1;
@@ -98,6 +101,21 @@ const App = (() => {
       output.scrollTop = output.scrollHeight;
     }
   });
+
+  // === Panel Collapse/Expand ===
+  function setPanelCollapsed(collapsed) {
+    appEl.classList.toggle('panel-collapsed', collapsed);
+    panelExpandBtn.classList.toggle('hidden', !collapsed);
+    localStorage.setItem('panelCollapsed', collapsed ? '1' : '');
+  }
+
+  panelCollapseBtn.addEventListener('click', () => setPanelCollapsed(true));
+  panelExpandBtn.addEventListener('click', () => setPanelCollapsed(false));
+
+  // Restore persisted state
+  if (localStorage.getItem('panelCollapsed') === '1') {
+    setPanelCollapsed(true);
+  }
 
   // === Satellite Toggle ===
   satelliteToggle.addEventListener('click', () => {
