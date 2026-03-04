@@ -43,13 +43,30 @@ const App = (() => {
       modalContent.innerHTML = html;
       modalActionHandler = actionHandler || null;
       modalOverlay.classList.remove('hidden');
+      // Push history state so back button closes modal instead of leaving site
+      if (!history.state || !history.state.modal) {
+        window.history.pushState({ modal: true }, '');
+      }
     },
     close() {
       modalOverlay.classList.add('hidden');
       modalContent.innerHTML = '';
       modalActionHandler = null;
+      // Pop the history entry we pushed (if it's still ours)
+      if (window.history.state && window.history.state.modal) {
+        window.history.back();
+      }
     }
   };
+
+  // Back button closes modal instead of navigating away
+  window.addEventListener('popstate', () => {
+    if (!modalOverlay.classList.contains('hidden')) {
+      modalOverlay.classList.add('hidden');
+      modalContent.innerHTML = '';
+      modalActionHandler = null;
+    }
+  });
 
   // Close on overlay click (not content)
   modalOverlay.addEventListener('click', (e) => {
