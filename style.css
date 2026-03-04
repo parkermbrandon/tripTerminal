@@ -62,7 +62,7 @@ html, body {
 /* === GRID LAYOUT === */
 #app {
   display: grid;
-  grid-template-columns: 280px 1fr 320px;
+  grid-template-columns: 1fr 320px;
   grid-template-rows: 1fr auto auto;
   height: 100vh;
   height: 100dvh;
@@ -71,7 +71,7 @@ html, body {
 
 #map-container {
   position: relative;
-  grid-column: 2;
+  grid-column: 1;
   grid-row: 1;
   border-right: 1px solid var(--border);
   overflow: hidden;
@@ -119,74 +119,68 @@ html, body {
   transform: scale(0.95);
 }
 
-/* === ITINERARY PANEL (left) === */
-#itin-panel {
-  grid-column: 1;
-  grid-row: 1 / -1;
+/* === VIEW TOGGLE === */
+#panel-view-toggle {
   display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background: var(--panel-bg);
-  border-right: 1px solid var(--border);
-}
-
-#itin-header {
-  padding: 12px 14px;
   border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   flex-shrink: 0;
+  background: var(--bg);
 }
 
-.itin-title {
-  font-family: 'IBM Plex Mono', monospace;
+.view-btn {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-family: 'Nunito', sans-serif;
   font-size: 11px;
   font-weight: 700;
+  padding: 10px 4px;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--text-dim);
+  letter-spacing: 0.5px;
 }
 
-.itin-actions {
+.view-btn:hover {
+  color: var(--text);
+  background: var(--accent-light);
+}
+
+.view-btn.active {
+  color: var(--accent);
+  border-bottom: 2px solid var(--accent);
+  margin-bottom: -1px;
+  background: var(--terminal-bg);
+}
+
+/* Itinerary add actions (flight/hotel) */
+#itin-add-actions {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
   display: flex;
-  gap: 6px;
+  gap: 8px;
 }
 
-.itin-actions button {
-  padding: 5px 10px;
+#itin-add-actions button {
+  flex: 1;
+  padding: 10px 16px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--terminal-bg);
   color: var(--text);
   font-family: 'Nunito', sans-serif;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
 }
 
-.itin-actions button:hover {
+#itin-add-actions button:hover {
   background: var(--accent-light);
   border-color: var(--accent);
   color: var(--accent);
-}
-
-#itin-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 0;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
-}
-
-#itin-list::-webkit-scrollbar {
-  width: 6px;
-}
-
-#itin-list::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 3px;
 }
 
 /* Date group headers */
@@ -324,7 +318,7 @@ html, body {
 
 /* === SIDE PANEL === */
 #side-panel {
-  grid-column: 3;
+  grid-column: 2;
   grid-row: 1 / -1;
   display: flex;
   flex-direction: column;
@@ -587,7 +581,7 @@ html, body {
 
 /* === TERMINAL TOGGLE BAR === */
 #terminal-toggle {
-  grid-column: 2;
+  grid-column: 1;
   grid-row: 2;
   display: flex;
   align-items: center;
@@ -626,7 +620,7 @@ html, body {
 
 /* === TERMINAL === */
 #terminal {
-  grid-column: 2;
+  grid-column: 1;
   grid-row: 3;
   background: var(--terminal-bg);
   display: flex;
@@ -1112,39 +1106,31 @@ html, body {
 @media (max-width: 700px) {
   #app {
     grid-template-columns: 1fr;
-    grid-template-rows: auto 35vh 1fr auto auto;
-  }
-
-  #itin-panel {
-    grid-column: 1;
-    grid-row: 1;
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-    max-height: 35vh;
+    grid-template-rows: 35vh 1fr auto auto;
   }
 
   #map-container {
     grid-column: 1;
-    grid-row: 2;
+    grid-row: 1;
     border-right: none;
     border-bottom: 1px solid var(--border);
   }
 
   #side-panel {
     grid-column: 1;
-    grid-row: 3;
+    grid-row: 2;
     border-bottom: 1px solid var(--border);
   }
 
   #terminal-toggle {
     grid-column: 1;
-    grid-row: 4;
+    grid-row: 3;
     border-right: none;
   }
 
   #terminal {
     grid-column: 1;
-    grid-row: 5;
+    grid-row: 4;
     border-right: none;
   }
 

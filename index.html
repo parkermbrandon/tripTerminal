@@ -10,19 +10,6 @@
 </head>
 <body>
   <div id="app">
-    <!-- Itinerary Panel (left) -->
-    <div id="itin-panel">
-      <div id="itin-header">
-        <span class="itin-title">ITINERARY</span>
-        <div class="itin-actions">
-          <button id="add-flight-btn" title="Add flight">+ Flight</button>
-          <button id="add-hotel-btn" title="Add hotel">+ Hotel</button>
-        </div>
-      </div>
-      <div id="itin-list"></div>
-      <div id="itin-cost-summary"></div>
-    </div>
-
     <!-- Map -->
     <div id="map-container">
       <div id="map"></div>
@@ -38,6 +25,10 @@
         <button id="trip-name" class="trip-name-btn">NO TRIP LOADED <span class="dropdown-arrow">&#9662;</span></button>
         <button id="share-btn" class="share-btn hidden" title="Copy share link">&#128279;</button>
       </div>
+      <div id="panel-view-toggle">
+        <button class="view-btn active" data-view="locations">By Location</button>
+        <button class="view-btn" data-view="itinerary">By Date</button>
+      </div>
       <div id="panel-tabs">
         <button class="tab active" data-cat="all">All</button>
         <button class="tab" data-cat="eats">Eats</button>
@@ -49,7 +40,12 @@
       <div id="panel-actions">
         <button id="add-item-btn">+ Add Place</button>
       </div>
+      <div id="itin-add-actions" class="hidden">
+        <button id="add-flight-btn">+ Flight</button>
+        <button id="add-hotel-btn">+ Sleeps</button>
+      </div>
       <div id="panel-list"></div>
+      <div id="itin-cost-summary"></div>
     </div>
 
     <!-- Terminal toggle bar -->

@@ -50,16 +50,6 @@ const TripMap = (() => {
     return d.innerHTML;
   }
 
-  function buildHotelPopupHtml(item) {
-    let html = `<div class="popup-category" style="color:var(--cat-sleeps)">HOTEL</div>`;
-    html += `<div class="popup-name">${escHtml(item.name || 'Hotel')}</div>`;
-    if (item.address) html += `<div class="popup-detail">${escHtml(item.address)}</div>`;
-    if (item.checkIn && item.checkOut) html += `<div class="popup-detail">${escHtml(item.checkIn)} to ${escHtml(item.checkOut)}</div>`;
-    if (item.confirmationNumber) html += `<div class="popup-detail">Conf: ${escHtml(item.confirmationNumber)}</div>`;
-    if (item.notes) html += `<div class="popup-detail">${escHtml(item.notes)}</div>`;
-    return html;
-  }
-
   function syncMarkers() {
     // Remove old markers
     Object.values(markers).forEach(m => m.setMap(null));
@@ -87,30 +77,6 @@ const TripMap = (() => {
 
       markers[item.id] = marker;
     });
-
-    // Hotel itinerary markers
-    const itinerary = DB.getItinerary();
-    itinerary.forEach(item => {
-      if (item.type !== 'hotel' || item.lat == null || item.lng == null) return;
-      const color = '#3b9b8f'; // sleeps color
-      const marker = new google.maps.Marker({
-        position: { lat: item.lat, lng: item.lng },
-        map: map,
-        icon: {
-          url: pinUrl(color),
-          scaledSize: new google.maps.Size(28, 38),
-          anchor: new google.maps.Point(14, 38),
-        },
-        title: item.name || 'Hotel',
-      });
-
-      marker.addListener('click', () => {
-        infoWindow.setContent(buildHotelPopupHtml(item));
-        infoWindow.open(map, marker);
-      });
-
-      markers['itin-' + item.id] = marker;
-    });
   }
 
   function flyTo(item) {
@@ -127,11 +93,9 @@ const TripMap = (() => {
 
   function fitAll() {
     const items = DB.getItems().filter(i => i.lat != null);
-    const hotels = DB.getItinerary().filter(i => i.type === 'hotel' && i.lat != null);
-    if (!items.length && !hotels.length) return;
+    if (!items.length) return;
     const bounds = new google.maps.LatLngBounds();
     items.forEach(i => bounds.extend({ lat: i.lat, lng: i.lng }));
-    hotels.forEach(i => bounds.extend({ lat: i.lat, lng: i.lng }));
     map.fitBounds(bounds, 40);
   }
 

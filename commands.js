@@ -462,10 +462,8 @@ const Commands = (() => {
       ctx.print('No active trip.', 'warning');
       return;
     }
-    const itinerary = DB.getItinerary();
     const items = DB.getItems();
 
-    // Same parseItemDate logic as app.js
     function parseDate(timeStr) {
       if (!timeStr) return null;
       const s = timeStr.trim();
@@ -491,14 +489,12 @@ const Commands = (() => {
       return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
     }
 
-    const entries = [];
-    itinerary.forEach(item => {
-      let dk = item.type === 'flight' ? (item.departureDate || null) : (item.checkIn || null);
-      entries.push({ item, dateKey: dk, source: 'itin' });
-    });
-    items.forEach(item => {
-      entries.push({ item, dateKey: parseDate(item.time), source: 'place' });
-    });
+    if (!items.length) {
+      ctx.print('Itinerary is empty.', 'dim');
+      return;
+    }
+
+    const entries = items.map(item => ({ item, dateKey: parseDate(item.time) }));
 
     const groups = {};
     entries.forEach(e => {
@@ -513,43 +509,21 @@ const Commands = (() => {
       return a.localeCompare(b);
     });
 
-    if (!entries.length) {
-      ctx.print('Itinerary is empty.', 'dim');
-      return;
-    }
-
     let totalCost = 0;
     ctx.print('');
     ctx.print('--- ITINERARY ---', 'info');
     keys.forEach(key => {
       ctx.print('');
-      ctx.print(`── ${key === '__none__' ? 'No Date' : fmtDate(key)} ──`, 'info');
+      ctx.print(`\u2500\u2500 ${key === '__none__' ? 'No Date' : fmtDate(key)} \u2500\u2500`, 'info');
       groups[key].forEach(e => {
         const item = e.item;
         const cost = parseFloat(String(item.cost || '').replace(/[^0-9.\-]/g, '')) || 0;
         totalCost += cost;
         const costStr = cost > 0 ? `  $${cost}` : '';
-        if (e.source === 'itin' && item.type === 'flight') {
-          ctx.print(`  ✈  ${item.departureCity || '?'} → ${item.arrivalCity || '?'}${costStr}`, 'cat-transport');
-          const parts = [];
-          if (item.airline) parts.push(item.airline + (item.flightNumber ? ' ' + item.flightNumber : ''));
-          if (item.departureTime || item.arrivalTime) parts.push((item.departureTime || '') + ' - ' + (item.arrivalTime || ''));
-          if (parts.length) ctx.print(`     ${parts.join(' | ')}`, 'dim');
-        } else if (e.source === 'itin' && item.type === 'hotel') {
-          ctx.print(`  🏨 ${item.name || 'Hotel'}${costStr}`, 'cat-sleeps');
-          const parts = [];
-          if (item.checkIn && item.checkOut) {
-            const nights = Math.round((new Date(item.checkOut + 'T12:00:00') - new Date(item.checkIn + 'T12:00:00')) / 86400000);
-            if (nights > 0) parts.push(nights + ' night' + (nights !== 1 ? 's' : ''));
-          }
-          if (item.confirmationNumber) parts.push('Conf: ' + item.confirmationNumber);
-          if (parts.length) ctx.print(`     ${parts.join(' | ')}`, 'dim');
-        } else {
-          const icons = { eats: '🍴', sleeps: '🛏️', spots: '📍', events: '📅', transport: '🚗' };
-          const icon = icons[item.category] || '📌';
-          ctx.print(`  ${icon} ${item.name}${costStr}`, `cat-${item.category}`);
-          if (item.time) ctx.print(`     ${item.time}`, 'dim');
-        }
+        const icons = { eats: '\uD83C\uDF74', sleeps: '\uD83D\uDECF\uFE0F', spots: '\uD83D\uDCCD', events: '\uD83D\uDCC5', transport: '\u2708\uFE0F' };
+        const icon = icons[item.category] || '\uD83D\uDCCC';
+        ctx.print(`  ${icon} ${item.name}${costStr}`, `cat-${item.category}`);
+        if (item.time) ctx.print(`     ${item.time}`, 'dim');
       });
     });
 
