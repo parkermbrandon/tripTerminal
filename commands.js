@@ -75,7 +75,7 @@ const Commands = (() => {
     ctx.print('  share                     Copy share link');
     ctx.print('  theme <default|ocean|sunset> Switch theme');
     ctx.print('');
-    ctx.print('Categories: eats, sleeps, spots, events', 'dim');
+    ctx.print('Categories: eats, sleeps, spots, events, transport', 'dim');
     ctx.print('');
   }, 'Show all commands');
 
@@ -87,7 +87,7 @@ const Commands = (() => {
     const category = args[0]?.toLowerCase();
     if (category && !DB.CATEGORIES[category]) {
       ctx.print(`Unknown category: ${category}`, 'error');
-      ctx.print('Categories: eats, sleeps, spots, events', 'dim');
+      ctx.print('Categories: eats, sleeps, spots, events, transport', 'dim');
       return;
     }
     const trip = DB.getActiveTrip();
@@ -108,6 +108,7 @@ const Commands = (() => {
       const prefix = `  [${cat.label}]`;
       let line = `${prefix} ${item.name}`;
       if (item.time) line += ` @ ${item.time}`;
+      if (item.cost) line += ` [${item.cost}]`;
       ctx.print(line, `cat-${item.category}`);
       if (item.address) ctx.print(`         ${item.address}`, 'dim');
       if (item.notes) ctx.print(`         ${item.notes}`, 'dim');
@@ -119,13 +120,13 @@ const Commands = (() => {
   register('add', async (args, ctx) => {
     if (args.length < 2) {
       ctx.print('Usage: add <category> <name>', 'error');
-      ctx.print('Categories: eats, sleeps, spots, events', 'dim');
+      ctx.print('Categories: eats, sleeps, spots, events, transport', 'dim');
       return;
     }
     const category = args[0].toLowerCase();
     if (!DB.CATEGORIES[category]) {
       ctx.print(`Unknown category: ${category}`, 'error');
-      ctx.print('Categories: eats, sleeps, spots, events', 'dim');
+      ctx.print('Categories: eats, sleeps, spots, events, transport', 'dim');
       return;
     }
     if (!DB.getActiveTrip()) {

@@ -19,6 +19,7 @@
   --cat-sleeps: #3b9b8f;
   --cat-spots: #e6a817;
   --cat-events: #7c5cbf;
+  --cat-transport: #4a9ef5;
   --shadow: rgba(60, 50, 30, 0.08);
 }
 
@@ -326,6 +327,13 @@ html, body {
   font-weight: 600;
 }
 
+.panel-item-cost {
+  font-size: 10px;
+  color: #2a9d5c;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
 .panel-item-time {
   font-size: 10px;
   color: var(--text-dim);
@@ -467,6 +475,7 @@ html, body {
 #terminal-output .cat-sleeps { color: var(--cat-sleeps); font-weight: 600; }
 #terminal-output .cat-spots { color: var(--cat-spots); font-weight: 600; }
 #terminal-output .cat-events { color: var(--cat-events); font-weight: 600; }
+#terminal-output .cat-transport { color: var(--cat-transport); font-weight: 600; }
 
 #terminal-input-line {
   display: flex;

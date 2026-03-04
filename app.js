@@ -341,6 +341,7 @@ const App = (() => {
           <button class="cat-pill${selectedCategory === 'sleeps' ? ' active' : ''}" data-action="set-cat" data-cat="sleeps">Sleeps</button>
           <button class="cat-pill${selectedCategory === 'spots' ? ' active' : ''}" data-action="set-cat" data-cat="spots">Spots</button>
           <button class="cat-pill${selectedCategory === 'events' ? ' active' : ''}" data-action="set-cat" data-cat="events">Events</button>
+          <button class="cat-pill${selectedCategory === 'transport' ? ' active' : ''}" data-action="set-cat" data-cat="transport">Transport</button>
         </div>
         <div class="modal-field">
           <label>Search for a place</label>
@@ -445,6 +446,10 @@ const App = (() => {
           <input type="text" id="detail-time" placeholder="${category === 'events' ? 'e.g. Mar 15 7pm' : 'e.g. 12:00 PM (optional)'}">
         </div>
         <div class="modal-field">
+          <label>Cost</label>
+          <input type="text" id="detail-cost" placeholder="e.g. $50 (optional)">
+        </div>
+        <div class="modal-field">
           <label>Notes</label>
           <textarea id="detail-notes" placeholder="Optional notes..."></textarea>
         </div>
@@ -464,6 +469,7 @@ const App = (() => {
         if (!name) return;
         const address = document.getElementById('detail-address').value.trim();
         const time = document.getElementById('detail-time').value.trim();
+        const cost = document.getElementById('detail-cost').value.trim();
         const notes = document.getElementById('detail-notes').value.trim();
 
         let lat = placeData.lat;
@@ -478,7 +484,7 @@ const App = (() => {
           }
         }
 
-        const item = DB.addItem({ name, category, address, lat, lng, time, notes });
+        const item = DB.addItem({ name, category, address, lat, lng, time, cost, notes });
         if (item) {
           refresh();
           if (lat != null) TripMap.flyTo(item);
@@ -523,6 +529,10 @@ const App = (() => {
           <input type="text" id="edit-time" value="${escAttr(item.time || '')}">
         </div>
         <div class="modal-field">
+          <label>Cost</label>
+          <input type="text" id="edit-cost" value="${escAttr(item.cost || '')}">
+        </div>
+        <div class="modal-field">
           <label>Notes</label>
           <textarea id="edit-notes">${escHtml(item.notes || '')}</textarea>
         </div>
@@ -541,9 +551,10 @@ const App = (() => {
         if (!name) return;
         const address = document.getElementById('edit-address').value.trim();
         const time = document.getElementById('edit-time').value.trim();
+        const cost = document.getElementById('edit-cost').value.trim();
         const notes = document.getElementById('edit-notes').value.trim();
 
-        const updates = { category, name, address, time, notes };
+        const updates = { category, name, address, time, cost, notes };
 
         // Re-geocode if address changed
         if (address !== (item.address || '')) {
@@ -649,6 +660,13 @@ const App = (() => {
 
       el.appendChild(dot);
       el.appendChild(nameSpan);
+
+      if (item.cost) {
+        const costSpan = document.createElement('span');
+        costSpan.className = 'panel-item-cost';
+        costSpan.textContent = item.cost;
+        el.appendChild(costSpan);
+      }
 
       if (item.time) {
         const timeSpan = document.createElement('span');

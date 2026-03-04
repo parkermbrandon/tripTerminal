@@ -3,10 +3,11 @@ const DB = (() => {
   const STORAGE_KEY = 'tripTerminal';
 
   const CATEGORIES = {
-    eats:   { label: 'EATS',   color: '#ff6b6b' },
-    sleeps: { label: 'SLEEPS', color: '#4ecdc4' },
-    spots:  { label: 'SPOTS',  color: '#ffe66d' },
-    events: { label: 'EVENTS', color: '#a855f7' },
+    eats:      { label: 'EATS',      color: '#ff6b6b' },
+    sleeps:    { label: 'SLEEPS',    color: '#4ecdc4' },
+    spots:     { label: 'SPOTS',     color: '#ffe66d' },
+    events:    { label: 'EVENTS',    color: '#a855f7' },
+    transport: { label: 'TRANSPORT', color: '#4a9ef5' },
   };
 
   // --- Firebase state ---
