@@ -173,18 +173,47 @@ const TripMap = (() => {
     return html;
   }
 
+  // --- Look up place_id for items that don't have one ---
+  function findPlaceId(item) {
+    return new Promise((resolve) => {
+      if (!placesService || !item.name) { resolve(null); return; }
+      const query = item.name + (item.address ? ' ' + item.address : '');
+      placesService.findPlaceFromQuery({
+        query,
+        fields: ['place_id'],
+        locationBias: item.lat != null ? { lat: item.lat, lng: item.lng } : undefined
+      }, (results, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && results && results.length) {
+          resolve(results[0].place_id);
+        } else {
+          resolve(null);
+        }
+      });
+    });
+  }
+
   // --- Async popup open ---
   function openPopup(item, marker) {
     // Show basic popup immediately
     infoWindow.setContent(buildPopupHtml(item, detailsCache.get(item.place_id) || null));
     infoWindow.open(map, marker);
 
-    // Fetch details if we have a place_id and it's not cached
-    if (item.place_id && !detailsCache.has(item.place_id)) {
-      getPlaceDetails(item.place_id).then(details => {
-        if (details) {
-          infoWindow.setContent(buildPopupHtml(item, details));
-        }
+    if (item.place_id) {
+      // Fetch details if not cached
+      if (!detailsCache.has(item.place_id)) {
+        getPlaceDetails(item.place_id).then(details => {
+          if (details) infoWindow.setContent(buildPopupHtml(item, details));
+        });
+      }
+    } else if (item.name) {
+      // Backfill: look up place_id, save it, then fetch details
+      findPlaceId(item).then(placeId => {
+        if (!placeId) return;
+        item.place_id = placeId;
+        DB.editItemById(item.id, { place_id: placeId });
+        return getPlaceDetails(placeId);
+      }).then(details => {
+        if (details) infoWindow.setContent(buildPopupHtml(item, details));
       });
     }
   }
