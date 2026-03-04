@@ -661,9 +661,19 @@ const App = (() => {
     if (!address) return null;
     const parts = address.split(',').map(s => s.trim()).filter(Boolean);
     if (parts.length < 2) return parts[0] || null;
-    // 2nd-to-last segment, strip postal codes
-    const candidate = parts[parts.length - 2].replace(/\d{3,}/g, '').trim();
-    return candidate || parts[parts.length - 2].trim() || null;
+
+    // US-style: "City, STATE ZIP, Country" — 2nd-to-last matches "XX DDDDD"
+    if (parts.length >= 3) {
+      const penult = parts[parts.length - 2].trim();
+      if (/^[A-Z]{2}\s+\d/.test(penult)) {
+        return parts[parts.length - 3].trim() || null;
+      }
+    }
+
+    // Others (Japan, Europe, etc.): 2nd-to-last, strip tokens containing digits
+    const raw = parts[parts.length - 2];
+    const cleaned = raw.replace(/\b\S*\d\S*\b/g, '').replace(/\s{2,}/g, ' ').trim();
+    return cleaned || null;
   }
 
   // === Date/Time Picker Helpers ===
