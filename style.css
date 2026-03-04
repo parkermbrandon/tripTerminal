@@ -669,10 +669,14 @@ html, body {
 
 #terminal-input {
   position: absolute;
-  left: -9999px;
+  left: 0;
+  top: 0;
+  width: 1px;
+  height: 1px;
   opacity: 0;
-  width: 0;
-  height: 0;
+  border: none;
+  padding: 0;
+  pointer-events: none;
 }
 
 #cursor {
