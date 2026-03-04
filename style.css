@@ -234,6 +234,7 @@ html, body {
   align-self: center;
 }
 
+.itin-item-edit,
 .itin-item-delete {
   width: 24px;
   height: 24px;
@@ -252,8 +253,14 @@ html, body {
   align-self: center;
 }
 
+.itin-item:hover .itin-item-edit,
 .itin-item:hover .itin-item-delete {
   opacity: 1;
+}
+
+.itin-item-edit:hover {
+  background: var(--accent-light);
+  color: var(--accent);
 }
 
 .itin-item-delete:hover {
@@ -521,6 +528,7 @@ html, body {
   flex-shrink: 0;
 }
 
+.panel-item-edit,
 .panel-item-delete {
   width: 28px;
   height: 28px;
@@ -538,8 +546,14 @@ html, body {
   transition: opacity 0.15s, background 0.15s, color 0.15s;
 }
 
+.panel-item:hover .panel-item-edit,
 .panel-item:hover .panel-item-delete {
   opacity: 1;
+}
+
+.panel-item-edit:hover {
+  background: var(--accent-light);
+  color: var(--accent);
 }
 
 .panel-item-delete:hover {
@@ -547,9 +561,11 @@ html, body {
   color: #d44;
 }
 
-/* Touch devices: always show delete */
+/* Touch devices: always show edit & delete */
 @media (hover: none) {
+  .panel-item-edit,
   .panel-item-delete,
+  .itin-item-edit,
   .itin-item-delete {
     opacity: 1;
   }

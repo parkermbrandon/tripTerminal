@@ -941,6 +941,16 @@ const App = (() => {
           el.appendChild(costEl);
         }
 
+        const editBtn = document.createElement('button');
+        editBtn.className = 'itin-item-edit';
+        editBtn.innerHTML = '&#9998;';
+        editBtn.title = 'Edit';
+        editBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openEditModal(entry.item);
+        });
+        el.appendChild(editBtn);
+
         const delBtn = document.createElement('button');
         delBtn.className = 'itin-item-delete';
         delBtn.innerHTML = '&times;';
@@ -953,8 +963,8 @@ const App = (() => {
         el.appendChild(delBtn);
 
         el.addEventListener('click', (e) => {
-          if (e.target.closest('.itin-item-delete')) return;
-          openEditModal(entry.item);
+          if (e.target.closest('.itin-item-delete') || e.target.closest('.itin-item-edit')) return;
+          if (entry.item.lat != null) TripMap.flyTo(entry.item);
         });
 
         panelList.appendChild(el);
@@ -1034,13 +1044,8 @@ const App = (() => {
         el.className = 'panel-item';
 
         el.addEventListener('click', (e) => {
-          if (e.target.closest('.panel-item-delete')) return;
+          if (e.target.closest('.panel-item-delete') || e.target.closest('.panel-item-edit')) return;
           if (item.lat != null) TripMap.flyTo(item);
-        });
-
-        el.addEventListener('dblclick', (e) => {
-          e.preventDefault();
-          openEditModal(item);
         });
 
         const dot = document.createElement('span');
@@ -1068,6 +1073,16 @@ const App = (() => {
           timeSpan.textContent = item.time;
           el.appendChild(timeSpan);
         }
+
+        const editBtn = document.createElement('button');
+        editBtn.className = 'panel-item-edit';
+        editBtn.innerHTML = '&#9998;';
+        editBtn.title = 'Edit';
+        editBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openEditModal(item);
+        });
+        el.appendChild(editBtn);
 
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'panel-item-delete';
