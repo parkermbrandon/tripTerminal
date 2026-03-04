@@ -328,7 +328,7 @@ const App = (() => {
       return;
     }
 
-    let selectedCategory = 'eats';
+    let selectedCategory = (activeTab !== 'all') ? activeTab : 'eats';
 
     const html = `
       <div class="modal-header">
@@ -337,10 +337,10 @@ const App = (() => {
       </div>
       <div class="modal-body">
         <div class="category-pills">
-          <button class="cat-pill active" data-action="set-cat" data-cat="eats">Eats</button>
-          <button class="cat-pill" data-action="set-cat" data-cat="sleeps">Sleeps</button>
-          <button class="cat-pill" data-action="set-cat" data-cat="spots">Spots</button>
-          <button class="cat-pill" data-action="set-cat" data-cat="events">Events</button>
+          <button class="cat-pill${selectedCategory === 'eats' ? ' active' : ''}" data-action="set-cat" data-cat="eats">Eats</button>
+          <button class="cat-pill${selectedCategory === 'sleeps' ? ' active' : ''}" data-action="set-cat" data-cat="sleeps">Sleeps</button>
+          <button class="cat-pill${selectedCategory === 'spots' ? ' active' : ''}" data-action="set-cat" data-cat="spots">Spots</button>
+          <button class="cat-pill${selectedCategory === 'events' ? ' active' : ''}" data-action="set-cat" data-cat="events">Events</button>
         </div>
         <div class="modal-field">
           <label>Search for a place</label>
