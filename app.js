@@ -662,15 +662,23 @@ const App = (() => {
     const parts = address.split(',').map(s => s.trim()).filter(Boolean);
     if (parts.length < 2) return parts[0] || null;
 
-    // US-style: "City, STATE ZIP, Country" — 2nd-to-last matches "XX DDDDD"
     if (parts.length >= 3) {
       const penult = parts[parts.length - 2].trim();
+      // US-style: "City, STATE ZIP, Country" — "NY 10118"
       if (/^[A-Z]{2}\s+\d/.test(penult)) {
         return parts[parts.length - 3].trim() || null;
       }
+      // Standalone postal code segment: "540-0002", "75007", etc.
+      if (/^[\d\s-]+$/.test(penult)) {
+        const city = parts[parts.length - 3];
+        if (city) {
+          const cleaned = city.replace(/\b\S*\d\S*\b/g, '').replace(/\s{2,}/g, ' ').trim();
+          return cleaned || city.trim();
+        }
+      }
     }
 
-    // Others (Japan, Europe, etc.): 2nd-to-last, strip tokens containing digits
+    // Others: 2nd-to-last, strip tokens containing digits
     const raw = parts[parts.length - 2];
     const cleaned = raw.replace(/\b\S*\d\S*\b/g, '').replace(/\s{2,}/g, ' ').trim();
     return cleaned || null;
