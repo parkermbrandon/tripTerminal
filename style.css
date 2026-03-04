@@ -416,6 +416,19 @@ html, body {
   background: var(--terminal-bg);
 }
 
+/* Category-colored tabs */
+.tab[data-cat="eats"]   { color: #ff6b6b; }
+.tab[data-cat="sleeps"] { color: #4ecdc4; }
+.tab[data-cat="spots"]  { color: #d4a017; }
+.tab[data-cat="events"] { color: #a855f7; }
+.tab[data-cat="transport"] { color: #4a9ef5; }
+
+.tab[data-cat="eats"].active   { border-bottom-color: #ff6b6b; }
+.tab[data-cat="sleeps"].active { border-bottom-color: #4ecdc4; }
+.tab[data-cat="spots"].active  { border-bottom-color: #d4a017; }
+.tab[data-cat="events"].active { border-bottom-color: #a855f7; }
+.tab[data-cat="transport"].active { border-bottom-color: #4a9ef5; }
+
 /* Add Place button */
 #panel-actions {
   padding: 10px 12px;
