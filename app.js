@@ -402,7 +402,8 @@ const App = (() => {
               address: r.display,
               lat: r.lat,
               lng: r.lng,
-              rating: r.rating
+              rating: r.rating,
+              place_id: r.place_id
             }));
             return `
               <div class="search-result" data-action="pick-result" data-place="${placeData}">
@@ -487,7 +488,7 @@ const App = (() => {
           }
         }
 
-        const item = DB.addItem({ name, category, address, lat, lng, time, cost, notes });
+        const item = DB.addItem({ name, category, address, lat, lng, time, cost, notes, place_id: placeData.place_id });
         if (item) {
           refresh();
           if (lat != null) TripMap.flyTo(item);

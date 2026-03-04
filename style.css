@@ -1031,8 +1031,9 @@ html, body {
 
 .gm-style .gm-style-iw-d {
   overflow: auto !important;
-  padding: 10px 14px !important;
+  padding: 0 !important;
   margin-top: 0 !important;
+  max-width: 300px !important;
 }
 
 .gm-style .gm-style-iw-chr {
@@ -1071,6 +1072,120 @@ html, body {
   font-size: 11px;
   color: var(--text-dim);
   line-height: 1.5;
+}
+
+.popup-card {
+  width: 300px;
+}
+
+.popup-photo {
+  width: 100%;
+  max-height: 150px;
+  object-fit: cover;
+  display: block;
+  border-radius: 12px 12px 0 0;
+}
+
+.popup-body {
+  padding: 10px 14px 12px;
+}
+
+.popup-rating {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: 4px;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.popup-rating .star.full { color: #f5a623; }
+.popup-rating .star.half { color: #f5a623; opacity: 0.55; }
+.popup-rating .star.empty { color: var(--border); }
+
+.popup-rating-num {
+  font-family: 'Nunito', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text);
+  margin-left: 4px;
+}
+
+.popup-rating-count {
+  font-family: 'Nunito', sans-serif;
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-left: 2px;
+}
+
+.popup-meta {
+  margin-top: 6px;
+}
+
+.popup-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 11px;
+  line-height: 1.8;
+}
+
+.popup-meta-icon {
+  flex-shrink: 0;
+  width: 14px;
+  text-align: center;
+  font-size: 12px;
+}
+
+.popup-meta a {
+  color: var(--accent);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.popup-meta a:hover {
+  text-decoration: underline;
+}
+
+.popup-hours {
+  font-family: 'Nunito', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.popup-hours.open { color: #2a9d5c; }
+.popup-hours.closed { color: #d44; }
+
+.popup-divider {
+  border-top: 1px solid var(--border);
+  margin: 8px 0;
+}
+
+.popup-notes {
+  font-style: italic;
+}
+
+.popup-directions {
+  display: block;
+  text-align: center;
+  margin-top: 10px;
+  padding: 8px 0;
+  background: var(--accent);
+  color: #fff;
+  font-family: 'Nunito', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.popup-directions:hover {
+  background: color-mix(in srgb, var(--accent) 85%, black);
 }
 
 /* === MOBILE RESPONSIVE === */

@@ -5,6 +5,7 @@ const TripMap = (() => {
   let infoWindow = null;
   let placesService = null;
   let currentMapType = 'roadmap';
+  const detailsCache = new Map();
 
   function init() {
     map = new google.maps.Map(document.getElementById('map'), {
@@ -34,20 +35,158 @@ const TripMap = (() => {
     return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
   }
 
-  function buildPopupHtml(item) {
-    const cat = DB.CATEGORIES[item.category] || { label: 'UNKNOWN', color: '#888' };
-    let html = `<div class="popup-category" style="color:${cat.color}">${cat.label}</div>`;
-    html += `<div class="popup-name">${escHtml(item.name)}</div>`;
-    if (item.address) html += `<div class="popup-detail">${escHtml(item.address)}</div>`;
-    if (item.time) html += `<div class="popup-detail">${escHtml(item.time)}</div>`;
-    if (item.notes) html += `<div class="popup-detail">${escHtml(item.notes)}</div>`;
-    return html;
-  }
-
   function escHtml(str) {
     const d = document.createElement('div');
     d.textContent = str;
     return d.innerHTML;
+  }
+
+  // --- Place Details with cache ---
+  function getPlaceDetails(placeId) {
+    if (detailsCache.has(placeId)) {
+      return Promise.resolve(detailsCache.get(placeId));
+    }
+    return new Promise((resolve) => {
+      if (!placesService) { resolve(null); return; }
+      placesService.getDetails({
+        placeId,
+        fields: ['name', 'formatted_phone_number', 'website', 'opening_hours', 'photos', 'rating', 'user_ratings_total', 'url']
+      }, (place, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && place) {
+          detailsCache.set(placeId, place);
+          resolve(place);
+        } else {
+          resolve(null);
+        }
+      });
+    });
+  }
+
+  // --- Directions URL ---
+  function directionsUrl(item) {
+    let url = 'https://www.google.com/maps/dir/?api=1';
+    if (item.lat != null && item.lng != null) {
+      url += `&destination=${item.lat},${item.lng}`;
+    }
+    if (item.place_id) {
+      url += `&destination_place_id=${item.place_id}`;
+    }
+    return url;
+  }
+
+  // --- Star rating HTML ---
+  function starsHtml(rating, count) {
+    const full = Math.floor(rating);
+    const half = rating - full >= 0.3;
+    let s = '';
+    for (let i = 0; i < 5; i++) {
+      if (i < full) s += '<span class="star full">&#9733;</span>';
+      else if (i === full && half) s += '<span class="star half">&#9733;</span>';
+      else s += '<span class="star empty">&#9734;</span>';
+    }
+    s += `<span class="popup-rating-num">${rating}</span>`;
+    if (count) s += `<span class="popup-rating-count">(${count.toLocaleString()})</span>`;
+    return s;
+  }
+
+  // --- Today's hours ---
+  function todayHoursHtml(openingHours) {
+    if (!openingHours) return '';
+    const isOpen = openingHours.isOpen();
+    const dayIndex = new Date().getDay();
+    const periods = openingHours.periods;
+    if (isOpen && periods) {
+      // Find today's closing time
+      const todayPeriod = periods.find(p => p.open && p.open.day === dayIndex && p.close);
+      if (todayPeriod && todayPeriod.close) {
+        const h = todayPeriod.close.hours;
+        const m = todayPeriod.close.minutes;
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+        const timeStr = m > 0 ? `${h12}:${String(m).padStart(2, '0')} ${ampm}` : `${h12} ${ampm}`;
+        return `<div class="popup-hours open">Open · Closes ${timeStr}</div>`;
+      }
+      return `<div class="popup-hours open">Open now</div>`;
+    }
+    return `<div class="popup-hours closed">Closed</div>`;
+  }
+
+  // --- Build popup HTML ---
+  function buildPopupHtml(item, details) {
+    const cat = DB.CATEGORIES[item.category] || { label: 'UNKNOWN', color: '#888' };
+    let html = '<div class="popup-card">';
+
+    // Photo
+    if (details && details.photos && details.photos.length) {
+      const photoUrl = details.photos[0].getUrl({ maxWidth: 300 });
+      html += `<img class="popup-photo" src="${photoUrl}" alt="">`;
+    }
+
+    html += '<div class="popup-body">';
+
+    // Category + Name
+    html += `<div class="popup-category" style="color:${cat.color}">${cat.label}</div>`;
+    html += `<div class="popup-name">${escHtml(item.name)}</div>`;
+
+    // Rating
+    const rating = (details && details.rating) || item.rating;
+    const ratingCount = details && details.user_ratings_total;
+    if (rating) {
+      html += `<div class="popup-rating">${starsHtml(rating, ratingCount)}</div>`;
+    }
+
+    // Address
+    if (item.address) {
+      html += `<div class="popup-detail">${escHtml(item.address)}</div>`;
+    }
+
+    // Phone, Website, Hours from details
+    if (details) {
+      html += '<div class="popup-meta">';
+      if (details.formatted_phone_number) {
+        html += `<div class="popup-meta-row"><span class="popup-meta-icon">&#9743;</span><a href="tel:${escHtml(details.formatted_phone_number)}">${escHtml(details.formatted_phone_number)}</a></div>`;
+      }
+      if (details.website) {
+        let hostname;
+        try { hostname = new URL(details.website).hostname.replace(/^www\./, ''); } catch { hostname = details.website; }
+        html += `<div class="popup-meta-row"><span class="popup-meta-icon">&#127760;</span><a href="${escHtml(details.website)}" target="_blank" rel="noopener">${escHtml(hostname)}</a></div>`;
+      }
+      if (details.opening_hours) {
+        html += todayHoursHtml(details.opening_hours);
+      }
+      html += '</div>';
+    }
+
+    // Divider + our item data
+    const hasItemData = item.time || item.cost || item.notes;
+    if (hasItemData) {
+      html += '<div class="popup-divider"></div>';
+      if (item.time) html += `<div class="popup-detail">${escHtml(item.time)}</div>`;
+      if (item.cost) html += `<div class="popup-detail">${escHtml(item.cost)}</div>`;
+      if (item.notes) html += `<div class="popup-detail popup-notes">${escHtml(item.notes)}</div>`;
+    }
+
+    // Directions button
+    html += `<a class="popup-directions" href="${directionsUrl(item)}" target="_blank" rel="noopener">Get Directions</a>`;
+
+    html += '</div></div>';
+    return html;
+  }
+
+  // --- Async popup open ---
+  function openPopup(item, marker) {
+    // Show basic popup immediately
+    infoWindow.setContent(buildPopupHtml(item, detailsCache.get(item.place_id) || null));
+    infoWindow.open(map, marker);
+
+    // Fetch details if we have a place_id and it's not cached
+    if (item.place_id && !detailsCache.has(item.place_id)) {
+      getPlaceDetails(item.place_id).then(details => {
+        if (details) {
+          infoWindow.setContent(buildPopupHtml(item, details));
+        }
+      });
+    }
   }
 
   function syncMarkers() {
@@ -71,8 +210,7 @@ const TripMap = (() => {
       });
 
       marker.addListener('click', () => {
-        infoWindow.setContent(buildPopupHtml(item));
-        infoWindow.open(map, marker);
+        openPopup(item, marker);
       });
 
       markers[item.id] = marker;
@@ -85,8 +223,7 @@ const TripMap = (() => {
     map.setZoom(15);
     if (markers[item.id]) {
       setTimeout(() => {
-        infoWindow.setContent(buildPopupHtml(item));
-        infoWindow.open(map, markers[item.id]);
+        openPopup(item, markers[item.id]);
       }, 500);
     }
   }
@@ -117,6 +254,7 @@ const TripMap = (() => {
           lng: r.geometry.location.lng(),
           rating: r.rating,
           types: r.types,
+          place_id: r.place_id,
         }));
         resolve(mapped);
       });
