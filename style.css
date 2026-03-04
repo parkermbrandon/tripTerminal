@@ -154,35 +154,6 @@ html, body {
   background: var(--terminal-bg);
 }
 
-/* Itinerary add actions (flight/hotel) */
-#itin-add-actions {
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-  display: flex;
-  gap: 8px;
-}
-
-#itin-add-actions button {
-  flex: 1;
-  padding: 10px 16px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--terminal-bg);
-  color: var(--text);
-  font-family: 'Nunito', sans-serif;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
-}
-
-#itin-add-actions button:hover {
-  background: var(--accent-light);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
 /* Date group headers */
 .itin-date-group {
   padding: 10px 14px 4px;

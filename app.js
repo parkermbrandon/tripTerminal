@@ -15,10 +15,7 @@ const App = (() => {
   const modalContent = document.getElementById('modal-content');
   const shareBtn = document.getElementById('share-btn');
   const panelViewToggle = document.getElementById('panel-view-toggle');
-  const itinAddActions = document.getElementById('itin-add-actions');
   const itinCostSummary = document.getElementById('itin-cost-summary');
-  const addFlightBtn = document.getElementById('add-flight-btn');
-  const addHotelBtn = document.getElementById('add-hotel-btn');
 
   let history = [];
   let historyIdx = -1;
@@ -447,9 +444,8 @@ const App = (() => {
           <label>Address</label>
           <input type="text" id="detail-address" value="${escAttr(placeData.address)}" ${placeData.lat != null ? 'readonly' : ''}>
         </div>
-        <div class="modal-field">
-          <label>${category === 'events' ? 'Date / Time' : 'Time'}</label>
-          <input type="text" id="detail-time" placeholder="${category === 'events' ? 'e.g. Mar 15 7pm' : 'e.g. 12:00 PM (optional)'}">
+        <div id="detail-datetime-container">
+          ${buildDateTimeFields(category, '')}
         </div>
         <div class="modal-field">
           <label>Cost</label>
@@ -474,7 +470,8 @@ const App = (() => {
         const name = document.getElementById('detail-name').value.trim();
         if (!name) return;
         const address = document.getElementById('detail-address').value.trim();
-        const time = document.getElementById('detail-time').value.trim();
+        const dtValues = readDateTimeFromForm();
+        const time = formatDateTime(category, dtValues.startDate, dtValues.endDate, dtValues.time);
         const cost = document.getElementById('detail-cost').value.trim();
         const notes = document.getElementById('detail-notes').value.trim();
 
@@ -530,9 +527,8 @@ const App = (() => {
           <label>Address</label>
           <input type="text" id="edit-address" value="${escAttr(item.address || '')}">
         </div>
-        <div class="modal-field">
-          <label>Time</label>
-          <input type="text" id="edit-time" value="${escAttr(item.time || '')}">
+        <div id="edit-datetime-container">
+          ${buildDateTimeFields(item.category, item.time)}
         </div>
         <div class="modal-field">
           <label>Cost</label>
@@ -556,7 +552,8 @@ const App = (() => {
         const name = document.getElementById('edit-name').value.trim();
         if (!name) return;
         const address = document.getElementById('edit-address').value.trim();
-        const time = document.getElementById('edit-time').value.trim();
+        const dtValues = readDateTimeFromForm();
+        const time = formatDateTime(category, dtValues.startDate, dtValues.endDate, dtValues.time);
         const cost = document.getElementById('edit-cost').value.trim();
         const notes = document.getElementById('edit-notes').value.trim();
 
@@ -581,6 +578,20 @@ const App = (() => {
         modal.close();
       }
     });
+
+    // Re-render date fields when category changes
+    setTimeout(() => {
+      const catSelect = document.getElementById('edit-category');
+      if (catSelect) {
+        catSelect.addEventListener('change', () => {
+          const container = document.getElementById('edit-datetime-container');
+          if (!container) return;
+          const dtValues = readDateTimeFromForm();
+          const currentTime = formatDateTime(catSelect.value, dtValues.startDate, dtValues.endDate, dtValues.time);
+          container.innerHTML = buildDateTimeFields(catSelect.value, currentTime);
+        });
+      }
+    }, 50);
   }
 
   // === Delete Item Confirmation ===
@@ -645,6 +656,138 @@ const App = (() => {
     transport: '\uD83D\uDE97',
   };
 
+  // === Parse city from address ===
+  function parseCity(address) {
+    if (!address) return null;
+    const parts = address.split(',').map(s => s.trim()).filter(Boolean);
+    if (parts.length < 2) return parts[0] || null;
+    // 2nd-to-last segment, strip postal codes
+    const candidate = parts[parts.length - 2].replace(/\d{3,}/g, '').trim();
+    return candidate || parts[parts.length - 2].trim() || null;
+  }
+
+  // === Date/Time Picker Helpers ===
+  const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  function monthDayToISO(str) {
+    if (!str) return '';
+    const m = str.match(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{1,2})(?:\s+(\d{4}))?/i);
+    if (!m) return '';
+    const mon = MONTH_NAMES.findIndex(n => n.toLowerCase() === m[1].toLowerCase().slice(0, 3));
+    if (mon < 0) return '';
+    const day = parseInt(m[2]);
+    const year = m[3] ? parseInt(m[3]) : new Date().getFullYear();
+    return `${year}-${String(mon + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  }
+
+  function parseTimeToInput(str) {
+    if (!str) return '';
+    const m = str.match(/(\d{1,2}):(\d{2})\s*(am|pm|a|p)?/i);
+    if (!m) return '';
+    let h = parseInt(m[1]);
+    const min = m[2];
+    const ampm = (m[3] || '').toLowerCase();
+    if (ampm.startsWith('p') && h < 12) h += 12;
+    if (ampm.startsWith('a') && h === 12) h = 0;
+    return `${String(h).padStart(2, '0')}:${min}`;
+  }
+
+  function parseDateTimeFromString(timeStr) {
+    if (!timeStr) return { startDate: '', endDate: '', time: '' };
+    const s = timeStr.trim();
+    // Range: "Mar 14 - Mar 19" or "Mar 14 2026 - Mar 19 2026"
+    const rangeMatch = s.match(/^((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2}(?:\s+\d{4})?)\s*[-–]\s*((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2}(?:\s+\d{4})?)\s*(.*)/i);
+    if (rangeMatch) {
+      return {
+        startDate: monthDayToISO(rangeMatch[1]),
+        endDate: monthDayToISO(rangeMatch[2]),
+        time: parseTimeToInput(rangeMatch[3])
+      };
+    }
+    // Single date: "Mar 15 2:30 PM" or "Mar 15"
+    const singleMatch = s.match(/^((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2}(?:\s+\d{4})?)\s*(.*)/i);
+    if (singleMatch) {
+      return {
+        startDate: monthDayToISO(singleMatch[1]),
+        endDate: '',
+        time: parseTimeToInput(singleMatch[2])
+      };
+    }
+    // Just a time: "2:30 PM"
+    const timeOnly = parseTimeToInput(s);
+    if (timeOnly) return { startDate: '', endDate: '', time: timeOnly };
+    return { startDate: '', endDate: '', time: '' };
+  }
+
+  function formatDateTime(category, startDate, endDate, time) {
+    const parts = [];
+    const fmtDate = (iso) => {
+      if (!iso) return '';
+      const d = new Date(iso + 'T12:00:00');
+      if (isNaN(d)) return iso;
+      return MONTH_NAMES[d.getMonth()] + ' ' + d.getDate();
+    };
+    const fmtTime = (t) => {
+      if (!t) return '';
+      const [hStr, mStr] = t.split(':');
+      let h = parseInt(hStr);
+      const m = mStr || '00';
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      if (h === 0) h = 12;
+      else if (h > 12) h -= 12;
+      return `${h}:${m} ${ampm}`;
+    };
+
+    if (category === 'sleeps' || category === 'transport') {
+      if (startDate && endDate) {
+        parts.push(fmtDate(startDate) + ' - ' + fmtDate(endDate));
+      } else if (startDate) {
+        parts.push(fmtDate(startDate));
+      }
+    } else {
+      if (startDate) parts.push(fmtDate(startDate));
+    }
+    if (time) parts.push(fmtTime(time));
+    return parts.join(' ');
+  }
+
+  function buildDateTimeFields(category, timeStr) {
+    const parsed = parseDateTimeFromString(timeStr);
+    const isRange = category === 'sleeps' || category === 'transport';
+
+    if (isRange) {
+      return `
+        <div class="modal-field">
+          <label>Start Date</label>
+          <input type="date" id="dt-start-date" value="${parsed.startDate}">
+        </div>
+        <div class="modal-field">
+          <label>End Date</label>
+          <input type="date" id="dt-end-date" value="${parsed.endDate}">
+        </div>
+        <div class="modal-field">
+          <label>Time (optional)</label>
+          <input type="time" id="dt-time" value="${parsed.time}">
+        </div>`;
+    }
+    return `
+      <div class="modal-field">
+        <label>Date</label>
+        <input type="date" id="dt-start-date" value="${parsed.startDate}">
+      </div>
+      <div class="modal-field">
+        <label>Time (optional)</label>
+        <input type="time" id="dt-time" value="${parsed.time}">
+      </div>`;
+  }
+
+  function readDateTimeFromForm() {
+    const startDate = (document.getElementById('dt-start-date') || {}).value || '';
+    const endDate = (document.getElementById('dt-end-date') || {}).value || '';
+    const time = (document.getElementById('dt-time') || {}).value || '';
+    return { startDate, endDate, time };
+  }
+
   // === Parse cost string to number ===
   function parseCost(costStr) {
     if (!costStr) return 0;
@@ -669,7 +812,8 @@ const App = (() => {
       return;
     }
 
-    const items = DB.getItems();
+    const allItems = DB.getItems();
+    const items = activeTab === 'all' ? allItems : allItems.filter(i => i.category === activeTab);
     const entries = [];
 
     items.forEach(item => {
@@ -791,122 +935,6 @@ const App = (() => {
     }
   }
 
-  // === Add Flight Modal (simplified — saves as transport item) ===
-  function openAddFlightModal() {
-    const trip = DB.getActiveTrip();
-    if (!trip) { openNewTripModal(); return; }
-
-    const html = `
-      <div class="modal-header">
-        <span class="modal-title">Add Flight</span>
-        <button class="modal-close" data-action="close">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div class="modal-field">
-          <label>Route</label>
-          <input type="text" id="flight-name" placeholder='e.g. "LAX → HNL" or "Hawaiian Air HA 11"' autofocus>
-        </div>
-        <div class="modal-field">
-          <label>Date / Time</label>
-          <input type="text" id="flight-time" placeholder='e.g. "Mar 15 8:30am - 11:45am"'>
-        </div>
-        <div class="modal-field">
-          <label>Cost</label>
-          <input type="text" id="flight-cost" placeholder="e.g. $450">
-        </div>
-        <div class="modal-field">
-          <label>Notes</label>
-          <textarea id="flight-notes" placeholder="Confirmation #, seat, terminal, etc."></textarea>
-        </div>
-        <div class="modal-actions">
-          <button class="btn btn-secondary" data-action="close">Cancel</button>
-          <button class="btn btn-primary" data-action="save">Add Flight</button>
-        </div>
-      </div>`;
-
-    modal.open(html, (action) => {
-      if (action === 'close') { modal.close(); return; }
-      if (action === 'save') {
-        const name = document.getElementById('flight-name').value.trim();
-        if (!name) return;
-        const time = document.getElementById('flight-time').value.trim();
-        const cost = document.getElementById('flight-cost').value.trim();
-        const notes = document.getElementById('flight-notes').value.trim();
-        DB.addItem({ name, category: 'transport', address: '', lat: null, lng: null, time, cost, notes });
-        refresh();
-        modal.close();
-      }
-    });
-
-    setTimeout(() => {
-      const el = document.getElementById('flight-name');
-      if (el) el.focus();
-    }, 50);
-  }
-
-  // === Add Sleeps Modal (simplified — saves as sleeps item with place search) ===
-  function openAddSleepsModal() {
-    const trip = DB.getActiveTrip();
-    if (!trip) { openNewTripModal(); return; }
-
-    const html = `
-      <div class="modal-header">
-        <span class="modal-title">Add Sleeps</span>
-        <button class="modal-close" data-action="close">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div class="modal-field">
-          <label>Name</label>
-          <input type="text" id="sleeps-name" placeholder='e.g. "Hilton Waikiki"' autofocus>
-        </div>
-        <div class="modal-field">
-          <label>Address</label>
-          <input type="text" id="sleeps-address" placeholder='e.g. "2500 Kuhio Ave, Honolulu"'>
-        </div>
-        <div class="modal-field">
-          <label>Dates</label>
-          <input type="text" id="sleeps-time" placeholder='e.g. "Mar 14 - Mar 19"'>
-        </div>
-        <div class="modal-field">
-          <label>Cost</label>
-          <input type="text" id="sleeps-cost" placeholder="e.g. $1200">
-        </div>
-        <div class="modal-field">
-          <label>Notes</label>
-          <textarea id="sleeps-notes" placeholder="Confirmation #, room type, etc."></textarea>
-        </div>
-        <div class="modal-actions">
-          <button class="btn btn-secondary" data-action="close">Cancel</button>
-          <button class="btn btn-primary" data-action="save">Add Sleeps</button>
-        </div>
-      </div>`;
-
-    modal.open(html, async (action) => {
-      if (action === 'close') { modal.close(); return; }
-      if (action === 'save') {
-        const name = document.getElementById('sleeps-name').value.trim();
-        if (!name) return;
-        const address = document.getElementById('sleeps-address').value.trim();
-        const time = document.getElementById('sleeps-time').value.trim();
-        const cost = document.getElementById('sleeps-cost').value.trim();
-        const notes = document.getElementById('sleeps-notes').value.trim();
-        let lat = null, lng = null;
-        if (address) {
-          const geo = await TripMap.geocode(address);
-          if (geo) { lat = geo.lat; lng = geo.lng; }
-        }
-        DB.addItem({ name, category: 'sleeps', address, lat, lng, time, cost, notes });
-        refresh();
-        modal.close();
-      }
-    });
-
-    setTimeout(() => {
-      const el = document.getElementById('sleeps-name');
-      if (el) el.focus();
-    }, 50);
-  }
-
   // === Side Panel ===
   function renderPanel() {
     const trip = DB.getActiveTrip();
@@ -921,20 +949,14 @@ const App = (() => {
       shareBtn.classList.add('hidden');
     }
 
-    // Toggle visibility based on activeView
+    // Render itinerary (By Date) view
     if (activeView === 'itinerary') {
-      panelTabs.classList.add('hidden');
-      document.getElementById('panel-actions').classList.add('hidden');
-      itinAddActions.classList.remove('hidden');
       itinCostSummary.style.display = '';
       renderItineraryView();
       return;
     }
 
     // Locations view
-    panelTabs.classList.remove('hidden');
-    document.getElementById('panel-actions').classList.remove('hidden');
-    itinAddActions.classList.add('hidden');
     itinCostSummary.innerHTML = '';
 
     const items = DB.getItems();
@@ -951,57 +973,78 @@ const App = (() => {
       return;
     }
 
+    // Group items by city
+    const cityGroups = {};
     filtered.forEach(item => {
-      const el = document.createElement('div');
-      el.className = 'panel-item';
+      const city = parseCity(item.address) || 'Other';
+      if (!cityGroups[city]) cityGroups[city] = [];
+      cityGroups[city].push(item);
+    });
 
-      el.addEventListener('click', (e) => {
-        if (e.target.closest('.panel-item-delete')) return;
-        if (item.lat != null) TripMap.flyTo(item);
+    const cityKeys = Object.keys(cityGroups).sort((a, b) => {
+      if (a === 'Other') return 1;
+      if (b === 'Other') return -1;
+      return a.localeCompare(b);
+    });
+
+    cityKeys.forEach(city => {
+      const header = document.createElement('div');
+      header.className = 'itin-date-group';
+      header.textContent = city;
+      panelList.appendChild(header);
+
+      cityGroups[city].forEach(item => {
+        const el = document.createElement('div');
+        el.className = 'panel-item';
+
+        el.addEventListener('click', (e) => {
+          if (e.target.closest('.panel-item-delete')) return;
+          if (item.lat != null) TripMap.flyTo(item);
+        });
+
+        el.addEventListener('dblclick', (e) => {
+          e.preventDefault();
+          openEditModal(item);
+        });
+
+        const dot = document.createElement('span');
+        dot.className = 'panel-dot';
+        const cat = DB.CATEGORIES[item.category] || { color: '#888' };
+        dot.style.background = cat.color;
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'panel-item-name';
+        nameSpan.textContent = item.name;
+
+        el.appendChild(dot);
+        el.appendChild(nameSpan);
+
+        if (item.cost) {
+          const costSpan = document.createElement('span');
+          costSpan.className = 'panel-item-cost';
+          costSpan.textContent = item.cost;
+          el.appendChild(costSpan);
+        }
+
+        if (item.time) {
+          const timeSpan = document.createElement('span');
+          timeSpan.className = 'panel-item-time';
+          timeSpan.textContent = item.time;
+          el.appendChild(timeSpan);
+        }
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'panel-item-delete';
+        deleteBtn.innerHTML = '&times;';
+        deleteBtn.title = 'Delete item';
+        deleteBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openDeleteItemConfirm(item);
+        });
+        el.appendChild(deleteBtn);
+
+        panelList.appendChild(el);
       });
-
-      el.addEventListener('dblclick', (e) => {
-        e.preventDefault();
-        openEditModal(item);
-      });
-
-      const dot = document.createElement('span');
-      dot.className = 'panel-dot';
-      const cat = DB.CATEGORIES[item.category] || { color: '#888' };
-      dot.style.background = cat.color;
-
-      const nameSpan = document.createElement('span');
-      nameSpan.className = 'panel-item-name';
-      nameSpan.textContent = item.name;
-
-      el.appendChild(dot);
-      el.appendChild(nameSpan);
-
-      if (item.cost) {
-        const costSpan = document.createElement('span');
-        costSpan.className = 'panel-item-cost';
-        costSpan.textContent = item.cost;
-        el.appendChild(costSpan);
-      }
-
-      if (item.time) {
-        const timeSpan = document.createElement('span');
-        timeSpan.className = 'panel-item-time';
-        timeSpan.textContent = item.time;
-        el.appendChild(timeSpan);
-      }
-
-      const deleteBtn = document.createElement('button');
-      deleteBtn.className = 'panel-item-delete';
-      deleteBtn.innerHTML = '&times;';
-      deleteBtn.title = 'Delete item';
-      deleteBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        openDeleteItemConfirm(item);
-      });
-      el.appendChild(deleteBtn);
-
-      panelList.appendChild(el);
     });
   }
 
@@ -1024,10 +1067,6 @@ const App = (() => {
   addItemBtn.addEventListener('click', () => {
     openAddPlaceModal();
   });
-
-  // Flight/Sleeps buttons
-  addFlightBtn.addEventListener('click', () => { openAddFlightModal(); });
-  addHotelBtn.addEventListener('click', () => { openAddSleepsModal(); });
 
   // View toggle
   panelViewToggle.addEventListener('click', (e) => {
