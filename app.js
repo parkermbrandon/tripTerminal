@@ -291,6 +291,15 @@ const App = (() => {
           <label>Trip Name</label>
           <input type="text" id="new-trip-name" placeholder='e.g. "Hawaii 2026"' autofocus>
         </div>
+        <div class="modal-info-row">
+          <span class="info-icon" data-action="toggle-info">ℹ</span>
+          <span class="info-label" data-action="toggle-info">How does sharing work?</span>
+        </div>
+        <div id="share-info-bubble" class="info-bubble hidden">
+          Each trip gets a unique link. Share it with anyone —
+          they'll see your trip and can add places too.
+          No accounts needed.
+        </div>
         <div class="modal-actions">
           <button class="btn btn-secondary" data-action="back">Back</button>
           <button class="btn btn-primary" data-action="create">Create Trip</button>
@@ -300,6 +309,9 @@ const App = (() => {
     modal.open(html, (action) => {
       if (action === 'close') {
         modal.close();
+      } else if (action === 'toggle-info') {
+        const bubble = document.getElementById('share-info-bubble');
+        if (bubble) bubble.classList.toggle('hidden');
       } else if (action === 'back') {
         openTripSelector();
       } else if (action === 'create') {
