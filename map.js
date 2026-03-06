@@ -308,6 +308,26 @@ const TripMap = (() => {
     });
   }
 
+  function highlightMarker(itemId) {
+    const marker = markers[itemId];
+    if (!marker) return;
+    marker._origIcon = marker.getIcon();
+    marker.setIcon({
+      url: pinUrl('#FFD700'),
+      scaledSize: new google.maps.Size(36, 48),
+      anchor: new google.maps.Point(18, 48),
+    });
+    marker.setZIndex(google.maps.Marker.MAX_ZINDEX + 1);
+  }
+
+  function unhighlightMarker(itemId) {
+    const marker = markers[itemId];
+    if (!marker || !marker._origIcon) return;
+    marker.setIcon(marker._origIcon);
+    marker.setZIndex(undefined);
+    delete marker._origIcon;
+  }
+
   function toggleMapType() {
     if (!map) return;
     currentMapType = currentMapType === 'roadmap' ? 'hybrid' : 'roadmap';
@@ -315,5 +335,5 @@ const TripMap = (() => {
     return currentMapType;
   }
 
-  return { init, syncMarkers, flyTo, fitAll, geocode, searchPlaces, toggleMapType };
+  return { init, syncMarkers, flyTo, fitAll, geocode, searchPlaces, toggleMapType, highlightMarker, unhighlightMarker };
 })();

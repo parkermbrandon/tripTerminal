@@ -997,6 +997,13 @@ const App = (() => {
           if (entry.item.lat != null) TripMap.flyTo(entry.item);
         });
 
+        el.addEventListener('mouseenter', () => {
+          TripMap.highlightMarker(entry.item.id);
+        });
+        el.addEventListener('mouseleave', () => {
+          TripMap.unhighlightMarker(entry.item.id);
+        });
+
         panelList.appendChild(el);
       });
     });
@@ -1076,6 +1083,13 @@ const App = (() => {
         el.addEventListener('click', (e) => {
           if (e.target.closest('.panel-item-delete') || e.target.closest('.panel-item-edit')) return;
           if (item.lat != null) TripMap.flyTo(item);
+        });
+
+        el.addEventListener('mouseenter', () => {
+          TripMap.highlightMarker(item.id);
+        });
+        el.addEventListener('mouseleave', () => {
+          TripMap.unhighlightMarker(item.id);
         });
 
         const dot = document.createElement('span');
