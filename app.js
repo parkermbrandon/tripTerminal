@@ -587,6 +587,8 @@ const App = (() => {
           <textarea id="edit-notes">${escHtml(item.notes || '')}</textarea>
         </div>
         <div class="modal-actions">
+          <button class="btn btn-danger" data-action="delete">Delete</button>
+          <span style="flex:1"></span>
           <button class="btn btn-secondary" data-action="close">Cancel</button>
           <button class="btn btn-primary" data-action="save">Save Changes</button>
         </div>
@@ -595,6 +597,8 @@ const App = (() => {
     modal.open(html, async (action) => {
       if (action === 'close') {
         modal.close();
+      } else if (action === 'delete') {
+        openDeleteItemConfirm(item);
       } else if (action === 'save') {
         const category = document.getElementById('edit-category').value;
         const name = document.getElementById('edit-name').value.trim();
@@ -981,19 +985,8 @@ const App = (() => {
         });
         el.appendChild(editBtn);
 
-        const delBtn = document.createElement('button');
-        delBtn.className = 'itin-item-delete';
-        delBtn.innerHTML = '&times;';
-        delBtn.title = 'Delete';
-        delBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          DB.removeItemById(entry.item.id);
-          refresh();
-        });
-        el.appendChild(delBtn);
-
         el.addEventListener('click', (e) => {
-          if (e.target.closest('.itin-item-delete') || e.target.closest('.itin-item-edit')) return;
+          if (e.target.closest('.itin-item-edit')) return;
           if (entry.item.lat != null) TripMap.flyTo(entry.item);
         });
 
@@ -1081,7 +1074,7 @@ const App = (() => {
         el.className = 'panel-item';
 
         el.addEventListener('click', (e) => {
-          if (e.target.closest('.panel-item-delete') || e.target.closest('.panel-item-edit')) return;
+          if (e.target.closest('.panel-item-edit')) return;
           if (item.lat != null) TripMap.flyTo(item);
         });
 
@@ -1128,15 +1121,6 @@ const App = (() => {
         });
         el.appendChild(editBtn);
 
-        const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'panel-item-delete';
-        deleteBtn.innerHTML = '&times;';
-        deleteBtn.title = 'Delete item';
-        deleteBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          openDeleteItemConfirm(item);
-        });
-        el.appendChild(deleteBtn);
 
         panelList.appendChild(el);
       });
