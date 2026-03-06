@@ -1125,14 +1125,6 @@ html, body {
 .gm-style-iw button[aria-label="Close"] {
   top: 4px !important;
   right: 4px !important;
-  background: rgba(0,0,0,0.5) !important;
-  border-radius: 50% !important;
-  width: 24px !important;
-  height: 24px !important;
-}
-
-.gm-style-iw button[aria-label="Close"] span {
-  background-color: white !important;
 }
 
 .popup-category {
