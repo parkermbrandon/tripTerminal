@@ -904,6 +904,7 @@ html, body {
 /* Buttons */
 .modal-actions {
   display: flex;
+  align-items: center;
   gap: 10px;
   margin-top: 18px;
 }
@@ -927,7 +928,6 @@ html, body {
 .btn-primary {
   background: var(--accent);
   color: #fff;
-  flex: 1;
 }
 
 .btn-primary:hover {
@@ -935,18 +935,18 @@ html, body {
 }
 
 .btn-secondary {
-  background: var(--bg);
+  background: transparent;
   color: var(--text);
+  border: 1px solid var(--border);
 }
 
 .btn-secondary:hover {
-  background: var(--border);
+  background: var(--bg);
 }
 
 .btn-danger {
   background: #d44;
   color: #fff;
-  flex: 1;
 }
 
 .btn-danger:hover {

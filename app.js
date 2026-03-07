@@ -588,9 +588,9 @@ const App = (() => {
         </div>
         <div class="modal-actions">
           <button class="btn btn-danger" data-action="delete">Delete</button>
-          <span style="flex:1"></span>
+          <div style="flex:1"></div>
           <button class="btn btn-secondary" data-action="close">Cancel</button>
-          <button class="btn btn-primary" data-action="save">Save Changes</button>
+          <button class="btn btn-primary" data-action="save">Save</button>
         </div>
       </div>`;
 
