@@ -166,8 +166,11 @@ const TripMap = (() => {
       if (item.notes) html += `<div class="popup-detail popup-notes">${escHtml(item.notes)}</div>`;
     }
 
-    // Directions button
+    // Action buttons
+    html += '<div class="popup-actions">';
+    html += `<button class="popup-edit" onclick="App.openEditModal(DB.getItems().find(i=>i.id==='${item.id}'))">Edit</button>`;
     html += `<a class="popup-directions" href="${directionsUrl(item)}" target="_blank" rel="noopener">Get Directions</a>`;
+    html += '</div>';
 
     html += '</div></div>';
     return html;

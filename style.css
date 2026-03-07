@@ -1246,10 +1246,34 @@ html, body {
   font-style: italic;
 }
 
+.popup-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.popup-edit {
+  flex: 1;
+  padding: 8px 0;
+  background: var(--bg-secondary, #2a2a2a);
+  color: var(--text, #fff);
+  font-family: 'Nunito', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 8px;
+  border: 1px solid var(--border, #444);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.popup-edit:hover {
+  background: var(--border, #444);
+}
+
 .popup-directions {
+  flex: 1;
   display: block;
   text-align: center;
-  margin-top: 10px;
   padding: 8px 0;
   background: var(--accent);
   color: #fff;

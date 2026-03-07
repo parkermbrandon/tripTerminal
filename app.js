@@ -1228,5 +1228,5 @@ const App = (() => {
 
   document.addEventListener('DOMContentLoaded', boot);
 
-  return { print, clear, refresh, ctx };
+  return { print, clear, refresh, ctx, openEditModal };
 })();
