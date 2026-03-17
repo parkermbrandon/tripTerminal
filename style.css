@@ -1466,3 +1466,224 @@ html, body {
     border-bottom: none;
   }
 }
+
+/* === Claude Chat Panel === */
+#claude-chat-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+  border: none;
+  color: white;
+  font-size: 22px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(108, 92, 231, 0.4);
+  z-index: 900;
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#claude-chat-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 20px rgba(108, 92, 231, 0.5);
+}
+
+#claude-chat-panel {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  width: 360px;
+  max-height: 500px;
+  background: var(--panel-bg, #16213e);
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  z-index: 899;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+#claude-chat-panel.open {
+  display: flex;
+}
+
+.claude-chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.claude-chat-header-title {
+  font-weight: 700;
+  color: #a29bfe;
+  font-size: 14px;
+}
+.claude-chat-close {
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0 4px;
+}
+.claude-chat-close:hover {
+  color: #aaa;
+}
+
+.claude-chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 200px;
+  max-height: 350px;
+}
+
+.claude-msg {
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  max-width: 90%;
+  word-wrap: break-word;
+}
+.claude-msg.user {
+  background: rgba(108, 92, 231, 0.2);
+  color: #e0e0e0;
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+}
+.claude-msg.assistant {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ccc;
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
+}
+.claude-msg.error {
+  background: rgba(255, 107, 107, 0.15);
+  color: #ff6b6b;
+  align-self: center;
+  font-size: 12px;
+}
+.claude-msg.typing {
+  color: #888;
+  font-style: italic;
+}
+
+.claude-suggestion-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 4px 0;
+  font-size: 12px;
+}
+.claude-suggestion-card .suggestion-name {
+  font-weight: 600;
+  color: #e0e0e0;
+}
+.claude-suggestion-card .suggestion-meta {
+  color: #888;
+  font-size: 11px;
+  margin-top: 2px;
+}
+.claude-suggestion-card .suggestion-reason {
+  color: #a29bfe;
+  font-size: 11px;
+  margin-top: 4px;
+  font-style: italic;
+}
+.claude-suggestion-add {
+  background: #6c5ce7;
+  border: none;
+  color: white;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  margin-top: 6px;
+}
+.claude-suggestion-add:hover {
+  background: #5a4bd1;
+}
+.claude-suggestion-add:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.claude-chat-input-row {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.claude-chat-input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #e0e0e0;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+}
+.claude-chat-input:focus {
+  border-color: #6c5ce7;
+}
+.claude-chat-input::placeholder {
+  color: #555;
+}
+.claude-chat-send {
+  background: #6c5ce7;
+  border: none;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.claude-chat-send:hover {
+  background: #5a4bd1;
+}
+.claude-chat-send:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.claude-msg .retry-btn {
+  background: none;
+  border: 1px solid #ff6b6b;
+  color: #ff6b6b;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  margin-top: 4px;
+}
+.claude-msg .retry-btn:hover {
+  background: rgba(255, 107, 107, 0.15);
+}
+
+@media (max-width: 500px) {
+  #claude-chat-panel {
+    width: calc(100vw - 24px);
+    right: 12px;
+    bottom: 76px;
+    max-height: 60vh;
+  }
+  #claude-chat-btn {
+    width: 44px;
+    height: 44px;
+    bottom: 16px;
+    right: 16px;
+  }
+}
