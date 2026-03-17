@@ -8,4 +8,4 @@ DAILY_REQUEST_CAP = "500"
 
 [[kv_namespaces]]
 binding = "RATE_STORE"
-id = "PLACEHOLDER_KV_ID"
+id = "cd74034c797241ad8df35728578c4996"
