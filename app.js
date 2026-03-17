@@ -43,7 +43,7 @@ const App = (() => {
     // Create floating button
     const btn = document.createElement('button');
     btn.id = 'claude-chat-btn';
-    btn.innerHTML = '&#10038;';
+    btn.innerHTML = '<img src="claude-color.svg" alt="Claude" style="width:28px;height:28px">';
     btn.title = 'Ask Claude';
     document.body.appendChild(btn);
 
@@ -52,7 +52,7 @@ const App = (() => {
     panel.id = 'claude-chat-panel';
     panel.innerHTML = `
       <div class="claude-chat-header">
-        <span class="claude-chat-header-title">&#10038; Claude — Trip Assistant</span>
+        <span class="claude-chat-header-title"><img src="claude-color.svg" alt="" style="width:16px;height:16px;vertical-align:-2px;margin-right:4px">Claude — Trip Assistant</span>
         <button class="claude-chat-close" title="Close">&#10005;</button>
       </div>
       <div class="claude-chat-messages" id="claude-messages"></div>
