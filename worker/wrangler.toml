@@ -1,0 +1,11 @@
+name = "trip-terminal-api"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+[vars]
+ALLOWED_ORIGIN = "https://brandonmparker.net"
+DAILY_REQUEST_CAP = "500"
+
+[[kv_namespaces]]
+binding = "RATE_STORE"
+id = "PLACEHOLDER_KV_ID"
