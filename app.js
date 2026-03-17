@@ -38,6 +38,146 @@ const App = (() => {
     return (str || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
+  // === Claude Chat Panel ===
+  function initChatPanel() {
+    // Create floating button
+    const btn = document.createElement('button');
+    btn.id = 'claude-chat-btn';
+    btn.innerHTML = '&#10038;';
+    btn.title = 'Ask Claude';
+    document.body.appendChild(btn);
+
+    // Create chat panel
+    const panel = document.createElement('div');
+    panel.id = 'claude-chat-panel';
+    panel.innerHTML = `
+      <div class="claude-chat-header">
+        <span class="claude-chat-header-title">&#10038; Claude — Trip Assistant</span>
+        <button class="claude-chat-close" title="Close">&#10005;</button>
+      </div>
+      <div class="claude-chat-messages" id="claude-messages"></div>
+      <div class="claude-chat-input-row">
+        <input class="claude-chat-input" id="claude-input" placeholder="Ask about your trip..." autocomplete="off">
+        <button class="claude-chat-send" id="claude-send">Send</button>
+      </div>
+    `;
+    document.body.appendChild(panel);
+
+    const messagesEl = document.getElementById('claude-messages');
+    const inputEl = document.getElementById('claude-input');
+    const sendBtn = document.getElementById('claude-send');
+    const closeBtn = panel.querySelector('.claude-chat-close');
+
+    // Toggle panel
+    btn.addEventListener('click', () => {
+      panel.classList.toggle('open');
+      if (panel.classList.contains('open')) {
+        inputEl.focus();
+      }
+    });
+
+    closeBtn.addEventListener('click', () => {
+      panel.classList.remove('open');
+    });
+
+    function appendMessage(role, html) {
+      const div = document.createElement('div');
+      div.className = `claude-msg ${role}`;
+      div.innerHTML = html;
+      messagesEl.appendChild(div);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      return div;
+    }
+
+    function renderSuggestions(suggestions) {
+      const container = document.createElement('div');
+      suggestions.forEach((s, i) => {
+        const cat = DB.CATEGORIES[s.category];
+        const catLabel = cat ? cat.label : s.category;
+        const card = document.createElement('div');
+        card.className = 'claude-suggestion-card';
+        card.innerHTML = `
+          <div class="suggestion-name">[${escHtml(catLabel)}] ${escHtml(s.name)}</div>
+          ${s.address ? `<div class="suggestion-meta">${escHtml(s.address)}</div>` : ''}
+          ${s.cost ? `<div class="suggestion-meta">${escHtml(s.cost)}</div>` : ''}
+          ${s.reason ? `<div class="suggestion-reason">${escHtml(s.reason)}</div>` : ''}
+        `;
+        const addBtn = document.createElement('button');
+        addBtn.className = 'claude-suggestion-add';
+        addBtn.textContent = '+ Add to trip';
+        addBtn.addEventListener('click', async () => {
+          addBtn.disabled = true;
+          addBtn.textContent = 'Adding...';
+          const result = await ClaudeClient.addSuggestion(i);
+          if (result && result.success) {
+            addBtn.textContent = 'Added!';
+            addBtn.style.background = '#00b894';
+          } else {
+            addBtn.textContent = 'Failed';
+            addBtn.disabled = false;
+          }
+        });
+        card.appendChild(addBtn);
+        container.appendChild(card);
+      });
+      messagesEl.appendChild(container);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    async function handleSend() {
+      const msg = inputEl.value.trim();
+      if (!msg || ClaudeClient.isSending()) return;
+
+      inputEl.value = '';
+      appendMessage('user', escHtml(msg));
+
+      const typingEl = appendMessage('typing', 'Thinking...');
+      sendBtn.disabled = true;
+      inputEl.disabled = true;
+
+      const result = await ClaudeClient.send(msg);
+
+      typingEl.remove();
+      sendBtn.disabled = false;
+      inputEl.disabled = false;
+      inputEl.focus();
+
+      if (result.error) {
+        const errorEl = appendMessage('error', escHtml(result.error));
+        const retryBtn = document.createElement('button');
+        retryBtn.className = 'retry-btn';
+        retryBtn.textContent = 'Retry';
+        retryBtn.addEventListener('click', () => {
+          errorEl.remove();
+          inputEl.value = msg;
+          handleSend();
+        });
+        errorEl.appendChild(retryBtn);
+        return;
+      }
+
+      if (result.text) {
+        appendMessage('assistant', escHtml(result.text));
+      }
+
+      if (result.suggestions && result.suggestions.length > 0) {
+        renderSuggestions(result.suggestions);
+      }
+    }
+
+    sendBtn.addEventListener('click', handleSend);
+    inputEl.addEventListener('keydown', (e) => {
+      e.stopPropagation(); // Prevent terminal from capturing keystrokes
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSend();
+      }
+      if (e.key === 'Escape') {
+        panel.classList.remove('open');
+      }
+    });
+  }
+
   // === Modal Controller ===
   let modalActionHandler = null;
 
@@ -1224,6 +1364,7 @@ const App = (() => {
     print('');
 
     renderPanel();
+    initChatPanel();
   }
 
   document.addEventListener('DOMContentLoaded', boot);
