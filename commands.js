@@ -75,6 +75,7 @@ const Commands = (() => {
     ctx.print('  satellite                 Toggle satellite view');
     ctx.print('  share                     Copy share link');
     ctx.print('  theme <default|ocean|sunset> Switch theme');
+    ctx.print('  ask <message>             Ask Claude about your trip');
     ctx.print('');
     ctx.print('Categories: eats, sleeps, spots, events, transport', 'dim');
     ctx.print('');
@@ -552,6 +553,73 @@ const Commands = (() => {
     }
     ctx.print(url, 'info');
   }, 'Copy share link for current trip');
+
+  register('ask', async (args, ctx) => {
+    if (!args.length) {
+      ctx.print('Usage: ask <message>', 'error');
+      ctx.print('Example: ask "find me ramen near Shibuya"', 'dim');
+      return;
+    }
+
+    // Check if args are just numbers (adding from previous suggestions)
+    const allNumbers = args.every(a => /^\d+$/.test(a));
+    if (allNumbers && ClaudeClient.getLastSuggestions().length > 0) {
+      const suggestions = ClaudeClient.getLastSuggestions();
+      for (const numStr of args) {
+        const idx = parseInt(numStr) - 1;
+        if (idx >= 0 && idx < suggestions.length) {
+          const s = suggestions[idx];
+          ctx.print(`Adding "${s.name}"...`, 'dim');
+          const result = await ClaudeClient.addSuggestion(idx);
+          if (result && result.success) {
+            ctx.print(`+ Added "${s.name}" to ${(DB.CATEGORIES[s.category] || {}).label || s.category}`, 'success');
+          } else {
+            ctx.print(`Failed to add "${s.name}"`, 'error');
+          }
+        } else {
+          ctx.print(`Invalid suggestion number: ${numStr}`, 'error');
+        }
+      }
+      ctx.refresh();
+      return;
+    }
+
+    const message = args.join(' ');
+    ctx.print(`Asking Claude...`, 'dim');
+
+    const result = await ClaudeClient.send(message);
+
+    if (result.error) {
+      ctx.print(result.error, 'error');
+      return;
+    }
+
+    // Print text response
+    if (result.text) {
+      ctx.print('');
+      result.text.split('\n').forEach(line => {
+        ctx.print(line, 'info');
+      });
+    }
+
+    // Print suggestions if any
+    if (result.suggestions && result.suggestions.length > 0) {
+      ctx.print('');
+      ctx.print('--- Suggestions ---', 'info');
+      result.suggestions.forEach((s, i) => {
+        const cat = DB.CATEGORIES[s.category];
+        const catLabel = cat ? cat.label : s.category;
+        ctx.print(`  ${i + 1}. [${catLabel}] ${s.name}`, 'success');
+        if (s.address) ctx.print(`     ${s.address}`, 'dim');
+        if (s.cost) ctx.print(`     ${s.cost}`, 'dim');
+        if (s.reason) ctx.print(`     ${s.reason}`, 'dim');
+      });
+      ctx.print('');
+      ctx.print('Type "ask 1 3" to add suggestions 1 and 3.', 'dim');
+    }
+
+    ctx.print('');
+  }, 'Ask Claude about your trip');
 
   return { registry, parse, execute };
 })();
