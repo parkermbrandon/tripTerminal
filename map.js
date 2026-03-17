@@ -338,5 +338,5 @@ const TripMap = (() => {
     return currentMapType;
   }
 
-  return { init, syncMarkers, flyTo, fitAll, geocode, searchPlaces, toggleMapType, highlightMarker, unhighlightMarker };
+  return { init, syncMarkers, flyTo, fitAll, geocode, searchPlaces, toggleMapType, highlightMarker, unhighlightMarker, findPlaceId };
 })();
