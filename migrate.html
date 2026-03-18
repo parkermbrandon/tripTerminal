@@ -18,8 +18,10 @@
       const val = document.getElementById('data').value.trim();
       if (!val) { document.getElementById('status').textContent = 'Paste data first!'; return; }
       try {
-        JSON.parse(val); // validate it's proper JSON
-        localStorage.setItem('tripTerminal', val);
+        // unwrap if double-stringified (starts with a quote)
+        let parsed = JSON.parse(val);
+        while (typeof parsed === 'string') parsed = JSON.parse(parsed);
+        localStorage.setItem('tripTerminal', JSON.stringify(parsed));
         document.getElementById('status').textContent = 'Saved! Refresh the main page.';
         document.getElementById('status').style.color = 'green';
       } catch(e) {
