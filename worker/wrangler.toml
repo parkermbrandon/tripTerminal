@@ -3,7 +3,7 @@ main = "src/index.js"
 compatibility_date = "2024-01-01"
 
 [vars]
-ALLOWED_ORIGIN = "https://brandonmparker.net"
+ALLOWED_ORIGIN = "https://tripterminal.net"
 DAILY_REQUEST_CAP = "500"
 
 [[kv_namespaces]]

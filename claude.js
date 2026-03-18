@@ -1,6 +1,6 @@
 // claude.js - Claude AI client: conversation history, API calls, tool execution
 const ClaudeClient = (() => {
-  const API_URL = 'https://api.brandonmparker.net';
+  const API_URL = 'https://api.tripterminal.net';
   const MAX_MESSAGES = 20;
 
   let conversationHistory = [];

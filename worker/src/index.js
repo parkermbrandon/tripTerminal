@@ -97,7 +97,7 @@ async function checkDailyCap(env) {
 export default {
   async fetch(request, env) {
     const origin = request.headers.get('Origin') || '';
-    const allowedOrigin = env.ALLOWED_ORIGIN || 'https://brandonmparker.net';
+    const allowedOrigin = env.ALLOWED_ORIGIN || 'https://tripterminal.net';
     const headers = corsHeaders(origin, allowedOrigin);
 
     // Handle CORS preflight
