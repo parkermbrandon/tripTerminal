@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head><title>Trip Data Migration</title></head>
+<body>
+  <h2>Trip Data Migration</h2>
+  <ol>
+    <li>Go to <strong>brandonmparker.net</strong>, open DevTools → Application → Local Storage</li>
+    <li>Click the <strong>tripTerminal</strong> key, click into the value in the bottom panel</li>
+    <li>Select all (Ctrl+A), copy (Ctrl+C)</li>
+    <li>Paste into the box below and click "Save"</li>
+  </ol>
+  <textarea id="data" rows="10" cols="80" placeholder="Paste tripTerminal value here..."></textarea>
+  <br><br>
+  <button onclick="doSave()">Save to localStorage</button>
+  <p id="status"></p>
+  <script>
+    function doSave() {
+      const val = document.getElementById('data').value.trim();
+      if (!val) { document.getElementById('status').textContent = 'Paste data first!'; return; }
+      try {
+        JSON.parse(val); // validate it's proper JSON
+        localStorage.setItem('tripTerminal', val);
+        document.getElementById('status').textContent = 'Saved! Refresh the main page.';
+        document.getElementById('status').style.color = 'green';
+      } catch(e) {
+        document.getElementById('status').textContent = 'Error: invalid JSON - ' + e.message;
+        document.getElementById('status').style.color = 'red';
+      }
+    }
+  </script>
+</body>
+</html>
