@@ -1,6 +1,9 @@
 name = "trip-terminal-api"
 main = "src/index.js"
 compatibility_date = "2024-01-01"
+routes = [
+  { pattern = "api.tripterminal.net/*", custom_domain = true }
+]
 
 [vars]
 ALLOWED_ORIGIN = "https://tripterminal.net"
