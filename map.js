@@ -7,6 +7,12 @@ const TripMap = (() => {
   let currentMapType = 'roadmap';
   const detailsCache = new Map();
 
+  // User location state
+  let userLocationMarker = null;
+  let userLocationAccuracyCircle = null;
+  let userLocationWatchId = null;
+  let userLocationCentered = false;
+
   function init() {
     map = new google.maps.Map(document.getElementById('map'), {
       center: { lat: 35.6762, lng: 139.6503 },
@@ -338,5 +344,103 @@ const TripMap = (() => {
     return currentMapType;
   }
 
-  return { init, syncMarkers, flyTo, fitAll, geocode, searchPlaces, toggleMapType, highlightMarker, unhighlightMarker, findPlaceId };
+  // --- User Location (blue dot + accuracy circle, live tracking) ---
+  function userDotIcon() {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22">
+      <circle cx="11" cy="11" r="10" fill="white"/>
+      <circle cx="11" cy="11" r="7" fill="#4285F4"/>
+    </svg>`;
+    return {
+      url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
+      scaledSize: new google.maps.Size(22, 22),
+      anchor: new google.maps.Point(11, 11),
+    };
+  }
+
+  function clearUserLocation() {
+    if (userLocationWatchId != null && navigator.geolocation) {
+      navigator.geolocation.clearWatch(userLocationWatchId);
+      userLocationWatchId = null;
+    }
+    if (userLocationMarker) { userLocationMarker.setMap(null); userLocationMarker = null; }
+    if (userLocationAccuracyCircle) { userLocationAccuracyCircle.setMap(null); userLocationAccuracyCircle = null; }
+    userLocationCentered = false;
+  }
+
+  function isTrackingLocation() {
+    return userLocationWatchId != null;
+  }
+
+  function toggleLocation(onError) {
+    if (isTrackingLocation()) {
+      clearUserLocation();
+      return { tracking: false };
+    }
+    if (!navigator.geolocation) {
+      return { tracking: false, error: 'Geolocation is not supported by this browser.' };
+    }
+
+    userLocationWatchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        const latLng = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        const accuracy = pos.coords.accuracy || 0;
+
+        if (!userLocationMarker) {
+          userLocationMarker = new google.maps.Marker({
+            position: latLng,
+            map,
+            icon: userDotIcon(),
+            title: 'Your location',
+            zIndex: google.maps.Marker.MAX_ZINDEX + 2,
+            clickable: false,
+          });
+        } else {
+          userLocationMarker.setPosition(latLng);
+        }
+
+        if (!userLocationAccuracyCircle) {
+          userLocationAccuracyCircle = new google.maps.Circle({
+            map,
+            center: latLng,
+            radius: accuracy,
+            strokeColor: '#4285F4',
+            strokeOpacity: 0.4,
+            strokeWeight: 1,
+            fillColor: '#4285F4',
+            fillOpacity: 0.12,
+            clickable: false,
+          });
+        } else {
+          userLocationAccuracyCircle.setCenter(latLng);
+          userLocationAccuracyCircle.setRadius(accuracy);
+        }
+
+        if (!userLocationCentered) {
+          map.panTo(latLng);
+          if (map.getZoom() < 13) map.setZoom(15);
+          userLocationCentered = true;
+        }
+      },
+      (err) => {
+        clearUserLocation();
+        const msg = err.code === err.PERMISSION_DENIED
+          ? 'Location permission denied. Enable it in your browser settings.'
+          : 'Could not get your location.';
+        if (typeof onError === 'function') onError(msg);
+        else alert(msg);
+      },
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
+    );
+
+    return { tracking: true };
+  }
+
+  function panToUserLocation() {
+    if (userLocationMarker) {
+      map.panTo(userLocationMarker.getPosition());
+      if (map.getZoom() < 13) map.setZoom(15);
+    }
+  }
+
+  return { init, syncMarkers, flyTo, fitAll, geocode, searchPlaces, toggleMapType, highlightMarker, unhighlightMarker, findPlaceId, toggleLocation, isTrackingLocation, panToUserLocation };
 })();

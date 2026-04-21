@@ -11,6 +11,7 @@ const App = (() => {
   const tripNameEl = document.getElementById('trip-name');
   const addItemBtn = document.getElementById('add-item-btn');
   const satelliteToggle = document.getElementById('satellite-toggle');
+  const locateBtn = document.getElementById('locate-btn');
   const modalOverlay = document.getElementById('modal-overlay');
   const modalContent = document.getElementById('modal-content');
   const shareBtn = document.getElementById('share-btn');
@@ -260,6 +261,25 @@ const App = (() => {
   // === Satellite Toggle ===
   satelliteToggle.addEventListener('click', () => {
     TripMap.toggleMapType();
+  });
+
+  // === Locate Me ===
+  function resetLocateBtn() {
+    locateBtn.classList.remove('active');
+    locateBtn.title = 'Show my location';
+  }
+  locateBtn.addEventListener('click', () => {
+    const result = TripMap.toggleLocation((msg) => {
+      resetLocateBtn();
+      alert(msg);
+    });
+    if (result.tracking) {
+      locateBtn.classList.add('active');
+      locateBtn.title = 'Hide my location';
+    } else {
+      resetLocateBtn();
+      if (result.error) alert(result.error);
+    }
   });
 
   // === Terminal Output ===
