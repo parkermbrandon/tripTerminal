@@ -695,7 +695,9 @@ const App = (() => {
           }
         }
 
-        const item = DB.addItem({ name, category, address, lat, lng, time, cost, notes, place_id: placeData.place_id });
+        const item = DB.addItem({ name, category, address, lat, lng, time,
+          startDate: dtValues.startDate || '', endDate: dtValues.endDate || '', startTime: dtValues.time || '',
+          cost, notes, place_id: placeData.place_id });
         if (item) {
           refresh();
           if (lat != null) TripMap.flyTo(item);
@@ -736,7 +738,7 @@ const App = (() => {
           <input type="text" id="edit-address" value="${escAttr(item.address || '')}">
         </div>
         <div id="edit-datetime-container">
-          ${buildDateTimeFields(item.category, item.time)}
+          ${buildDateTimeFields(item.category, item.time, { startDate: item.startDate, endDate: item.endDate, time: item.startTime })}
         </div>
         <div class="modal-field">
           <label>Cost</label>
@@ -769,7 +771,8 @@ const App = (() => {
         const cost = document.getElementById('edit-cost').value.trim();
         const notes = document.getElementById('edit-notes').value.trim();
 
-        const updates = { category, name, address, time, cost, notes };
+        const updates = { category, name, address, time, cost, notes,
+          startDate: dtValues.startDate || '', endDate: dtValues.endDate || '', startTime: dtValues.time || '' };
 
         // Re-geocode if address changed
         if (address !== (item.address || '')) {
@@ -799,8 +802,7 @@ const App = (() => {
           const container = document.getElementById('edit-datetime-container');
           if (!container) return;
           const dtValues = readDateTimeFromForm();
-          const currentTime = formatDateTime(catSelect.value, dtValues.startDate, dtValues.endDate, dtValues.time);
-          container.innerHTML = buildDateTimeFields(catSelect.value, currentTime);
+          container.innerHTML = buildDateTimeFields(catSelect.value, '', { startDate: dtValues.startDate, endDate: dtValues.endDate, time: dtValues.time });
         });
       }
     }, 50);
@@ -831,30 +833,6 @@ const App = (() => {
         modal.close();
       }
     });
-  }
-
-  // === Itinerary: Date Parsing ===
-  function parseItemDate(timeStr) {
-    if (!timeStr) return null;
-    const s = timeStr.trim();
-    // Try direct Date parse first (handles ISO, "March 15, 2026", etc.)
-    const direct = new Date(s);
-    if (!isNaN(direct) && direct.getFullYear() > 2000) {
-      return direct.toISOString().slice(0, 10);
-    }
-    // Try "Mon DD" patterns like "Mar 15", "Mar 15 7pm", "March 15"
-    const monthMatch = s.match(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{1,2})/i);
-    if (monthMatch) {
-      const months = { jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11 };
-      const mon = months[monthMatch[1].toLowerCase().slice(0, 3)];
-      const day = parseInt(monthMatch[2]);
-      if (mon !== undefined && day >= 1 && day <= 31) {
-        const year = new Date().getFullYear();
-        const d = new Date(year, mon, day);
-        return d.toISOString().slice(0, 10);
-      }
-    }
-    return null;
   }
 
   // === Itinerary Icons ===
@@ -981,8 +959,12 @@ const App = (() => {
     return parts.join(' ');
   }
 
-  function buildDateTimeFields(category, timeStr) {
-    const parsed = parseDateTimeFromString(timeStr);
+  function buildDateTimeFields(category, timeStr, structured) {
+    // Prefer exact structured values (which retain the real year) when available;
+    // fall back to parsing the legacy free-text string for older items.
+    const parsed = (structured && (structured.startDate || structured.endDate || structured.time))
+      ? { startDate: structured.startDate || '', endDate: structured.endDate || '', time: structured.time || '' }
+      : parseDateTimeFromString(timeStr);
     const isRange = category === 'sleeps' || category === 'transport';
 
     if (isRange) {
@@ -1026,12 +1008,7 @@ const App = (() => {
   }
 
   // === Format date for display ===
-  function formatDateHeading(dateStr) {
-    if (!dateStr) return 'No Date';
-    const d = new Date(dateStr + 'T12:00:00');
-    if (isNaN(d)) return dateStr;
-    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-  }
+  const formatDateHeading = TripDates.formatHeading;
 
   // === Render Itinerary Timeline (into panelList) ===
   function renderItineraryView() {
@@ -1047,19 +1024,8 @@ const App = (() => {
     const entries = [];
 
     items.forEach(item => {
-      const dateKey = parseItemDate(item.time);
-      let sortTime = '';
-      if (item.time) {
-        const tMatch = item.time.match(/(\d{1,2}):?(\d{2})?\s*(am|pm|a|p)?/i);
-        if (tMatch) {
-          let h = parseInt(tMatch[1]);
-          const m = tMatch[2] ? parseInt(tMatch[2]) : 0;
-          const ampm = (tMatch[3] || '').toLowerCase();
-          if (ampm.startsWith('p') && h < 12) h += 12;
-          if (ampm.startsWith('a') && h === 12) h = 0;
-          sortTime = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
-        }
-      }
+      const dateKey = TripDates.dateKey(item);
+      const sortTime = TripDates.timeKey(item);
       entries.push({ item, dateKey, sortTime, type: item.category });
     });
 

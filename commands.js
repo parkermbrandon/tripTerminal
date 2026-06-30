@@ -465,37 +465,14 @@ const Commands = (() => {
     }
     const items = DB.getItems();
 
-    function parseDate(timeStr) {
-      if (!timeStr) return null;
-      const s = timeStr.trim();
-      const direct = new Date(s);
-      if (!isNaN(direct) && direct.getFullYear() > 2000) return direct.toISOString().slice(0, 10);
-      const m = s.match(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{1,2})/i);
-      if (m) {
-        const months = { jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11 };
-        const mon = months[m[1].toLowerCase().slice(0, 3)];
-        const day = parseInt(m[2]);
-        if (mon !== undefined && day >= 1 && day <= 31) {
-          const d = new Date(new Date().getFullYear(), mon, day);
-          return d.toISOString().slice(0, 10);
-        }
-      }
-      return null;
-    }
-
-    function fmtDate(ds) {
-      if (!ds) return 'No Date';
-      const d = new Date(ds + 'T12:00:00');
-      if (isNaN(d)) return ds;
-      return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-    }
-
     if (!items.length) {
       ctx.print('Itinerary is empty.', 'dim');
       return;
     }
 
-    const entries = items.map(item => ({ item, dateKey: parseDate(item.time) }));
+    const entries = items.map(item => ({
+      item, dateKey: TripDates.dateKey(item), sortTime: TripDates.timeKey(item)
+    }));
 
     const groups = {};
     entries.forEach(e => {
@@ -509,13 +486,14 @@ const Commands = (() => {
       if (b === '__none__') return -1;
       return a.localeCompare(b);
     });
+    keys.forEach(k => groups[k].sort((a, b) => (a.sortTime || '').localeCompare(b.sortTime || '')));
 
     let totalCost = 0;
     ctx.print('');
     ctx.print('--- ITINERARY ---', 'info');
     keys.forEach(key => {
       ctx.print('');
-      ctx.print(`\u2500\u2500 ${key === '__none__' ? 'No Date' : fmtDate(key)} \u2500\u2500`, 'info');
+      ctx.print(`\u2500\u2500 ${key === '__none__' ? 'No Date' : TripDates.formatHeading(key)} \u2500\u2500`, 'info');
       groups[key].forEach(e => {
         const item = e.item;
         const cost = parseFloat(String(item.cost || '').replace(/[^0-9.\-]/g, '')) || 0;
