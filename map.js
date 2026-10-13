@@ -8,8 +8,9 @@ const TripMap = (() => {
   const detailsCache = new Map();
 
   // Pin names show only at neighborhood zoom or closer, to keep wide views uncluttered
-  const LABEL_MIN_ZOOM = 14;
+  const LABEL_MIN_ZOOM = 15;
   const LABEL_MAX_CHARS = 24;
+  let labelsShown = false;
 
   // User location state
   let userLocationMarker = null;
@@ -262,6 +263,8 @@ const TripMap = (() => {
       markers[item.id] = marker;
     });
 
+    // Fresh markers start unlabeled
+    labelsShown = false;
     updateLabels();
   }
 
@@ -270,10 +273,14 @@ const TripMap = (() => {
     return text.length > LABEL_MAX_CHARS ? text.slice(0, LABEL_MAX_CHARS - 1).trimEnd() + '…' : text;
   }
 
-  // Show or hide pin name labels based on the current zoom level
+  // Show or hide pin name labels based on the current zoom level.
+  // Only touches markers when crossing the threshold: setLabel rebuilds each
+  // label's DOM, which lags with hundreds of pins if done on every zoom step.
   function updateLabels() {
     if (!map) return;
     const show = map.getZoom() >= LABEL_MIN_ZOOM;
+    if (show === labelsShown) return;
+    labelsShown = show;
     Object.values(markers).forEach(marker => {
       if (!marker._labelText) return;
       marker.setLabel(show ? {
