@@ -83,6 +83,15 @@ html, body {
   background: var(--bg);
 }
 
+/* Pin name labels (shown when zoomed in) - white halo keeps text readable on road and satellite */
+.map-pin-label {
+  white-space: nowrap;
+  text-shadow:
+    -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff,
+    0 0 3px #fff;
+  pointer-events: none;
+}
+
 /* === MAP CONTROLS === */
 #map-controls {
   position: absolute;

@@ -7,6 +7,10 @@ const TripMap = (() => {
   let currentMapType = 'roadmap';
   const detailsCache = new Map();
 
+  // Pin names show only at neighborhood zoom or closer, to keep wide views uncluttered
+  const LABEL_MIN_ZOOM = 14;
+  const LABEL_MAX_CHARS = 24;
+
   // User location state
   let userLocationMarker = null;
   let userLocationAccuracyCircle = null;
@@ -28,6 +32,8 @@ const TripMap = (() => {
 
     infoWindow = new google.maps.InfoWindow();
     placesService = new google.maps.places.PlacesService(map);
+
+    map.addListener('zoom_changed', updateLabels);
 
     return map;
   }
@@ -243,15 +249,40 @@ const TripMap = (() => {
           url: pinUrl(cat.color),
           scaledSize: new google.maps.Size(28, 38),
           anchor: new google.maps.Point(14, 38),
+          labelOrigin: new google.maps.Point(14, 46),
         },
         title: item.name,
       });
+      marker._labelText = truncateLabel(item.name);
 
       marker.addListener('click', () => {
         openPopup(item, marker);
       });
 
       markers[item.id] = marker;
+    });
+
+    updateLabels();
+  }
+
+  function truncateLabel(name) {
+    const text = String(name || '').trim();
+    return text.length > LABEL_MAX_CHARS ? text.slice(0, LABEL_MAX_CHARS - 1).trimEnd() + '…' : text;
+  }
+
+  // Show or hide pin name labels based on the current zoom level
+  function updateLabels() {
+    if (!map) return;
+    const show = map.getZoom() >= LABEL_MIN_ZOOM;
+    Object.values(markers).forEach(marker => {
+      if (!marker._labelText) return;
+      marker.setLabel(show ? {
+        text: marker._labelText,
+        className: 'map-pin-label',
+        color: '#1a1a1a',
+        fontSize: '12px',
+        fontWeight: '600',
+      } : null);
     });
   }
 
@@ -325,6 +356,7 @@ const TripMap = (() => {
       url: pinUrl('#FFD700'),
       scaledSize: new google.maps.Size(36, 48),
       anchor: new google.maps.Point(18, 48),
+      labelOrigin: new google.maps.Point(18, 56),
     });
     marker.setZIndex(google.maps.Marker.MAX_ZINDEX + 1);
   }
