@@ -6,7 +6,7 @@
   <title>Trip Terminal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=2026-10-13">
 </head>
 <body>
   <div id="app">
@@ -75,11 +75,12 @@
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBT2CURjhz1xdEsOTnYBrfPHoNMHOjG6og&libraries=places"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-  <script src="data.js"></script>
-  <script src="dateutils.js"></script>
-  <script src="map.js"></script>
-  <script src="claude.js"></script>
-  <script src="commands.js"></script>
-  <script src="app.js"></script>
+  <!-- Bump ?v= on every deploy that changes these files so browsers skip their 4h cached copy -->
+  <script src="data.js?v=2026-10-13"></script>
+  <script src="dateutils.js?v=2026-10-13"></script>
+  <script src="map.js?v=2026-10-13"></script>
+  <script src="claude.js?v=2026-10-13"></script>
+  <script src="commands.js?v=2026-10-13"></script>
+  <script src="app.js?v=2026-10-13"></script>
 </body>
 </html>
