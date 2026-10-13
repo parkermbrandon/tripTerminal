@@ -116,6 +116,11 @@ const ClaudeClient = (() => {
 
   // --- Process Claude's response: extract text + handle tool calls ---
   async function processResponse(response) {
+    // Safety classifier declined: don't add the turn to history
+    if (response.stop_reason === 'refusal') {
+      return { text: "Sorry, I can't help with that request.", suggestions: null, done: true };
+    }
+
     const textParts = [];
     const toolUses = [];
 

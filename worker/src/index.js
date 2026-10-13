@@ -160,8 +160,15 @@ export default {
 
     // Build Anthropic API request
     const apiBody = {
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 2048,
+      model: 'claude-sonnet-5-5',
+      // Thinking counts toward max_tokens, so leave headroom beyond the reply itself
+      max_tokens: 16000,
+      // The system prompt embeds live trip items and the client trims old turns, so
+      // earlier thinking blocks can go stale; drop them instead of returning a 400
+      thinking: { type: 'adaptive', block_binding: { prefix_mismatch_behavior: 'drop_block' } },
+      output_config: { effort: 'low' },
+      // Retry safety-classifier refusals on a fallback model server-side
+      fallbacks: 'default',
       system: buildSystemPrompt(tripContext),
       tools: TOOLS,
       messages,
@@ -174,6 +181,7 @@ export default {
         headers: {
           'x-api-key': env.ANTHROPIC_API_KEY,
           'anthropic-version': '2023-06-01',
+          'anthropic-beta': 'thinking-binding-controls-2026-08-01,server-side-fallback-2026-07-01',
           'content-type': 'application/json',
         },
         body: JSON.stringify(apiBody),
